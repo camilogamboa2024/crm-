@@ -1,0 +1,28 @@
+{% extends 'crm/base.html' %}
+{% block content %}
+  {% if object %}
+    <h1>Editar cliente</h1>
+  {% else %}
+    <h1>Agregar cliente</h1>
+  {% endif %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <div class="form-grid">
+      {{ form.non_field_errors }}
+      {% for field in form %}
+        <div class="form-group">
+          {{ field.label_tag }}
+          {{ field }}
+          {% if field.help_text %}
+            <small class="help-text">{{ field.help_text }}</small>
+          {% endif %}
+          {% for error in field.errors %}
+            <p class="error">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn-primary">Guardar</button>
+    <a href="{% url 'crm:customer_list' %}" class="btn-secondary">Cancelar</a>
+  </form>
+{% endblock %}

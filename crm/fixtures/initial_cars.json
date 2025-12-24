@@ -1,0 +1,54 @@
+[
+  {
+    "model": "crm.car",
+    "pk": 1,
+    "fields": {
+      "make": "KIA",
+      "model": "Picanto",
+      "year": 2024,
+      "license_plate": "PCT-WHT-001",
+      "status": "available",
+      "daily_rate": "35.00",
+      "color": "Blanco"
+    }
+  },
+  {
+    "model": "crm.car",
+    "pk": 2,
+    "fields": {
+      "make": "KIA",
+      "model": "Picanto",
+      "year": 2024,
+      "license_plate": "PCT-GRY-002",
+      "status": "available",
+      "daily_rate": "35.00",
+      "color": "Gris"
+    }
+  },
+  {
+    "model": "crm.car",
+    "pk": 3,
+    "fields": {
+      "make": "KIA",
+      "model": "Picanto",
+      "year": 2024,
+      "license_plate": "PCT-PLT-003",
+      "status": "available",
+      "daily_rate": "35.00",
+      "color": "Plata"
+    }
+  },
+  {
+    "model": "crm.car",
+    "pk": 4,
+    "fields": {
+      "make": "KIA",
+      "model": "Sonet",
+      "year": 2024,
+      "license_plate": "SNT-2024-004",
+      "status": "available",
+      "daily_rate": "60.00",
+      "color": "Gris"
+    }
+  }
+]

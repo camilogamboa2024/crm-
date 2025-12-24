@@ -1,0 +1,31 @@
+{% extends 'crm/base.html' %}
+{% block content %}
+  <h1>Clientes</h1>
+  <a href="{% url 'crm:customer_add' %}" class="btn-primary">Agregar cliente</a>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Apellido</th>
+        <th>Correo</th>
+        <th>Teléfono</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for customer in customers %}
+        <tr>
+          <td>{{ customer.first_name }}</td>
+          <td>{{ customer.last_name }}</td>
+          <td>{{ customer.email }}</td>
+          <td>{{ customer.phone }}</td>
+          <td>
+            <a href="{% url 'crm:customer_edit' customer.pk %}" class="btn-secondary">Editar</a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">No hay clientes registrados.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

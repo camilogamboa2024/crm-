@@ -1,0 +1,37 @@
+{% extends 'crm/base.html' %}
+{% block content %}
+  <h1>Vehículos</h1>
+  <a href="{% url 'crm:car_add' %}" class="btn-primary">Agregar vehículo</a>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Marca</th>
+        <th>Modelo</th>
+        <th>Año</th>
+        <th>Placa</th>
+        <th>Color</th>
+        <th>Estado</th>
+        <th>Tarifa diaria</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for car in cars %}
+        <tr>
+          <td>{{ car.make }}</td>
+          <td>{{ car.model }}</td>
+          <td>{{ car.year }}</td>
+          <td>{{ car.license_plate }}</td>
+          <td>{{ car.color }}</td>
+          <td>{{ car.get_status_display }}</td>
+          <td>${{ car.daily_rate }}</td>
+          <td>
+            <a href="{% url 'crm:car_edit' car.pk %}" class="btn-secondary">Editar</a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7">No hay vehículos registrados.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

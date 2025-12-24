@@ -1,0 +1,62 @@
+"""
+Forms for the CRM application.
+
+Using Django’s ModelForm facility we generate forms tied to the underlying
+models. These forms automatically include validation logic and are
+used in the class‑based views.
+"""
+
+from __future__ import annotations
+
+from django import forms
+
+from .models import Car, Customer, Reservation
+
+
+class CarForm(forms.ModelForm):
+    class Meta:
+        model = Car
+        fields = ['make', 'model', 'year', 'license_plate', 'status', 'daily_rate', 'color']
+        widgets = {
+            'year': forms.NumberInput(attrs={'min': 1900, 'max': 2100}),
+            'daily_rate': forms.NumberInput(attrs={'step': '0.01'}),
+        }
+
+
+class CustomerForm(forms.ModelForm):
+    class Meta:
+        model = Customer
+        fields = ['first_name', 'last_name', 'email', 'phone', 'address']
+
+
+class ReservationForm(forms.ModelForm):
+    class Meta:
+        model = Reservation
+        fields = ['customer', 'car', 'start_date', 'end_date', 'status']
+        widgets = {
+            'start_date': forms.DateInput(attrs={'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+
+class PublicReservationForm(forms.Form):
+    """Form used on the public website to allow customers to request a booking."""
+
+    # Car selection limited to currently available vehicles.
+    car = forms.ModelChoiceField(
+        queryset=Car.objects.filter(status='available'),
+        label='Vehículo',
+        help_text='Seleccione el vehículo que desea reservar',
+    )
+    start_date = forms.DateField(
+        label='Fecha de inicio',
+        widget=forms.DateInput(attrs={'type': 'date'}),
+    )
+    end_date = forms.DateField(
+        label='Fecha de fin',
+        widget=forms.DateInput(attrs={'type': 'date'}),
+    )
+    first_name = forms.CharField(max_length=50, label='Nombre')
+    last_name = forms.CharField(max_length=50, label='Apellido')
+    email = forms.EmailField(label='Correo electrónico')
+    phone = forms.CharField(max_length=20, label='Teléfono')

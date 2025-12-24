@@ -1,0 +1,44 @@
+{#
+  Base template for CRM pages.
+
+  Extends the global styles and provides a consistent navigation bar
+  for managing cars, customers and reservations. Individual pages
+  supply their content via the "content" block.
+#}
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CRM | Gamboa Rental Cars</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+  </head>
+  <body>
+    <header class="crm-navbar">
+      <div class="container">
+        <a href="/" class="logo">
+          <img src="{% static 'images/logo.png' %}" alt="Logo" />
+        </a>
+        <nav class="crm-menu">
+          <a href="{% url 'crm:car_list' %}">Vehículos</a>
+          <a href="{% url 'crm:customer_list' %}">Clientes</a>
+          <a href="{% url 'crm:reservation_list' %}">Reservas</a>
+          <a href="/admin/">Admin</a>
+          <a href="/" class="btn-secondary">Sitio público</a>
+        </nav>
+      </div>
+    </header>
+    <main class="crm-content">
+      <div class="container">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+    <footer class="footer">
+      <div class="container">
+        <p>&copy; 2025 Gamboa Rental Cars | Panel CRM</p>
+      </div>
+    </footer>
+  </body>
+</html>

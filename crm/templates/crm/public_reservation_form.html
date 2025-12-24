@@ -1,0 +1,25 @@
+{% extends 'crm/base.html' %}
+{% load static %}
+{% block content %}
+  <h1>Reserva tu vehículo</h1>
+  <p>Por favor, completa el siguiente formulario para solicitar la reserva de tu vehículo. Nos comunicaremos contigo a la brevedad para confirmar la disponibilidad.</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <div class="form-grid">
+      {{ form.non_field_errors }}
+      {% for field in form %}
+        <div class="form-group">
+          {{ field.label_tag }}
+          {{ field }}
+          {% if field.help_text %}
+            <small class="help-text">{{ field.help_text }}</small>
+          {% endif %}
+          {% for error in field.errors %}
+            <p class="error">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn-primary">Solicitar reserva</button>
+  </form>
+{% endblock %}

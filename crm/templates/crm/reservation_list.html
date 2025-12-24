@@ -1,0 +1,35 @@
+{% extends 'crm/base.html' %}
+{% block content %}
+  <h1>Reservas</h1>
+  <a href="{% url 'crm:reservation_add' %}" class="btn-primary">Crear reserva</a>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Vehículo</th>
+        <th>Fecha inicio</th>
+        <th>Fecha fin</th>
+        <th>Estado</th>
+        <th>Costo total</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for reservation in reservations %}
+        <tr>
+          <td>{{ reservation.customer }}</td>
+          <td>{{ reservation.car }}</td>
+          <td>{{ reservation.start_date }}</td>
+          <td>{{ reservation.end_date }}</td>
+          <td>{{ reservation.get_status_display }}</td>
+          <td>${{ reservation.total_cost }}</td>
+          <td>
+            <a href="{% url 'crm:reservation_edit' reservation.pk %}" class="btn-secondary">Editar</a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7">No hay reservas registradas.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

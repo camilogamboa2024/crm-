@@ -1,0 +1,137 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Detalles de tu reserva | Gamboa Rental Cars</title>
+
+  <!-- Si ya tienes un CSS global, lo respetamos -->
+  <link rel="stylesheet" href="{% static 'css/style.css' %}"/>
+
+  <style>
+    .wrap{max-width:1100px;margin:0 auto;padding:24px 16px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:10px;border:1px solid #d0d7de;background:#fff;text-decoration:none;color:#111;font-weight:600}
+    .btn-primary{background:#1f5eff;border-color:#1f5eff;color:#fff}
+    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+    .card{background:#fff;border:1px solid #e6e8eb;border-radius:14px;padding:16px}
+    .h1{font-size:28px;margin:0 0 10px 0}
+    .muted{color:#6b7280;font-size:14px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .field label{display:block;font-weight:700;font-size:13px;margin:10px 0 6px}
+    .field input,.field select{width:100%;padding:12px;border:1px solid #d0d7de;border-radius:10px}
+    .errors{background:#fff5f5;border:1px solid #fed7d7;color:#b91c1c;padding:10px;border-radius:10px;margin:10px 0}
+    .sumline{display:flex;justify-content:space-between;gap:12px;margin:8px 0;font-size:14px}
+    .sumtotal{font-size:18px;font-weight:800}
+    .sticky{position:sticky;top:14px}
+    @media (max-width: 920px){
+      .grid{grid-template-columns:1fr}
+      .sticky{position:static}
+    }
+  </style>
+</head>
+
+<body style="background:#f6f7f9;">
+  <!-- Navbar simple (si ya tienes una navbar en base, puedes integrarla luego) -->
+  <div class="wrap">
+    <div class="topbar">
+      <a class="btn" href="{{ back_url }}">← Elegir otro auto</a>
+      <a class="btn" href="/">Volver al inicio</a>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT: datos -->
+      <div class="card">
+        <h1 class="h1">Detalles de tu reserva</h1>
+        <p class="muted">Completa tus datos y confirmas. Te contactamos para coordinar entrega y pago.</p>
+
+        {% if form.non_field_errors %}
+          <div class="errors">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <!-- Estos 3 pueden ir hidden si vienen desde /buscar -->
+          {{ form.car }}
+          {{ form.start_date }}
+          {{ form.end_date }}
+
+          <div class="row">
+            <div class="field">
+              <label>Nombre *</label>
+              {{ form.first_name }}
+              {% for e in form.first_name.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="field">
+              <label>Apellido *</label>
+              {{ form.last_name }}
+              {% for e in form.last_name.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label>Correo electrónico *</label>
+              {{ form.email }}
+              {% for e in form.email.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="field">
+              <label>Teléfono / WhatsApp *</label>
+              {{ form.phone }}
+              {% for e in form.phone.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+
+          <div style="margin-top:14px">
+            <label style="display:flex;align-items:flex-start;gap:10px;font-size:14px">
+              <input type="checkbox" name="terms" required style="margin-top:4px"/>
+              <span>Leí y acepto los <a href="/contrato/" target="_blank" rel="noopener">Términos y condiciones</a>.</span>
+            </label>
+          </div>
+
+          <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" type="submit" style="min-width:220px">RESERVAR AHORA</button>
+            <button class="btn" type="button" onclick="window.print()">Imprimir</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- RIGHT: resumen -->
+      <div class="card sticky">
+        <h2 style="margin:0 0 8px 0;font-size:18px">Tu reserva</h2>
+
+        {% if selected_car %}
+          <div style="display:flex;gap:12px;align-items:center;margin:10px 0 14px">
+            <img src="{% static 'images/car_placeholder.png' %}" alt="auto" style="width:92px;height:62px;object-fit:cover;border-radius:10px;border:1px solid #e6e8eb">
+            <div>
+              <div style="font-weight:800">{{ selected_car.make }} {{ selected_car.model }} {{ selected_car.year }}</div>
+              <div class="muted">{{ selected_car.color }} · {{ selected_car.license_plate }}</div>
+            </div>
+          </div>
+        {% else %}
+          <div class="muted" style="margin-top:10px">
+            Selecciona un vehículo desde el buscador para ver el resumen.
+          </div>
+        {% endif %}
+
+        <div class="sumline"><span>Pickup</span><strong>{{ pickup }}</strong></div>
+        <div class="sumline"><span>Desde</span><strong>{{ start_date|default:"—" }}</strong></div>
+        <div class="sumline"><span>Hasta</span><strong>{{ end_date|default:"—" }}</strong></div>
+
+        <hr style="border:none;border-top:1px solid #eef0f2;margin:14px 0"/>
+
+        {% if pricing.ok %}
+          <div class="sumline"><span>{{ pricing.days }} día(s) × USD {{ pricing.daily|floatformat:2 }}</span><strong>USD {{ pricing.subtotal|floatformat:2 }}</strong></div>
+          <div class="sumline"><span>ITBMS 7%</span><strong>USD {{ pricing.itbms|floatformat:2 }}</strong></div>
+          <div class="sumline sumtotal"><span>TOTAL</span><span>USD {{ pricing.total|floatformat:2 }}</span></div>
+          <p class="muted" style="margin:10px 0 0">*Total estimado. Confirmamos por WhatsApp.</p>
+        {% else %}
+          <p class="muted" style="margin:10px 0 0">Elige fechas válidas para calcular el total.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>

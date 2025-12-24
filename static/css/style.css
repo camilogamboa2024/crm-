@@ -1,0 +1,365 @@
+/*
+ * Global styles for Gamboa Rental Cars website and CRM.
+ *
+ * This stylesheet defines a cohesive look and feel across both the public
+ * website and the internal CRM interface. Variables define a basic
+ * color palette which can easily be updated to reflect brand colours.
+ */
+
+:root {
+  --primary-color: #047d69; /* teal/green accent */
+  --secondary-color: #2ca95c; /* lighter green */
+  --dark-color: #333333;
+  --light-color: #ffffff;
+  --grey-light: #f7f7f7;
+  --border-color: #e0e0e0;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--dark-color);
+  background-color: var(--grey-light);
+}
+
+/* Container */
+.container {
+  width: 90%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Navigation bar */
+.navbar, .crm-navbar {
+  background-color: var(--light-color);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.5rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.navbar .logo img,
+.crm-navbar .logo img {
+  height: 50px;
+  width: auto;
+}
+
+.nav-menu,
+.crm-menu {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.nav-menu a,
+.crm-menu a {
+  text-decoration: none;
+  color: var(--dark-color);
+  font-weight: 500;
+}
+
+.nav-menu a:hover,
+.crm-menu a:hover {
+  color: var(--primary-color);
+}
+
+/* Hamburger menu for mobile */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: space-around;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.hamburger span {
+  width: 100%;
+  height: 3px;
+  background-color: var(--dark-color);
+  border-radius: 2px;
+  transition: all 0.3s ease-in-out;
+}
+
+@media (max-width: 768px) {
+  .nav-menu {
+    position: absolute;
+    top: 70px;
+    left: 0;
+    right: 0;
+    background-color: var(--light-color);
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    display: none;
+  }
+  .nav-menu a {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    width: 100%;
+    text-align: center;
+  }
+  .hamburger {
+    display: flex;
+  }
+}
+
+/* Hero section */
+.hero {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  color: var(--light-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4rem 0;
+}
+
+.hero h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.hero p {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+/* Buttons */
+.btn-primary,
+.btn-secondary {
+  display: inline-block;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: var(--light-color);
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: var(--secondary-color);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+}
+
+.btn-secondary:hover {
+  background-color: var(--primary-color);
+  color: var(--light-color);
+}
+
+/* Services section */
+.services {
+  background-color: var(--light-color);
+  padding: 3rem 0;
+  text-align: center;
+}
+.services h2 {
+  margin-bottom: 2rem;
+}
+.service-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+}
+.service-item {
+  background-color: var(--grey-light);
+  padding: 1.5rem;
+  border-radius: 8px;
+  flex: 1 1 250px;
+  max-width: 300px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.service-item h3 {
+  margin-top: 0;
+  color: var(--primary-color);
+}
+
+/* Benefits section */
+.benefits {
+  padding: 3rem 0;
+  background-color: var(--grey-light);
+}
+.benefits h2 {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+.benefits ul {
+  list-style: none;
+  padding: 0;
+  max-width: 700px;
+  margin: 0 auto;
+}
+.benefits li {
+  margin: 0.5rem 0;
+  padding-left: 1.2rem;
+  position: relative;
+}
+.benefits li::before {
+  content: '✔';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--secondary-color);
+}
+
+/* Contact section */
+.contact {
+  padding: 3rem 0;
+  background-color: var(--light-color);
+  text-align: center;
+}
+.contact-form {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* Contact numbers formatting */
+.contact-numbers {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+.contact-numbers a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+.contact-numbers a:hover {
+  text-decoration: underline;
+}
+.contact-form .form-group {
+  margin-bottom: 1rem;
+  text-align: left;
+}
+.contact-form input,
+.contact-form textarea {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1rem;
+}
+.contact-form input:focus,
+.contact-form textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+/* Footer */
+.footer {
+  background-color: var(--dark-color);
+  color: var(--light-color);
+  padding: 1rem 0;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+/* CRM-specific styles */
+.crm-content h1 {
+  margin-top: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  background-color: var(--light-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.table th, .table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+}
+.table th {
+  background-color: var(--grey-light);
+}
+.table tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.form-grid {
+  display: grid;
+  gap: 1rem;
+}
+.form-grid .form-group {
+  display: flex;
+  flex-direction: column;
+}
+.form-grid label {
+  margin-bottom: 0.3rem;
+  font-weight: 500;
+}
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  padding: 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  font-size: 1rem;
+}
+.form-grid .error {
+  color: #d9534f;
+  font-size: 0.9rem;
+  margin-top: 0.2rem;
+}
+.help-text {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+/* WhatsApp floating button */
+.whatsapp-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #25D366;
+  color: var(--light-color);
+  border-radius: 50px;
+  padding: 12px 16px;
+  font-weight: bold;
+  text-decoration: none;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+.whatsapp-btn:hover {
+  background-color: #1ebea5;
+}
+
+/* CRM nav adjustments */
+.crm-navbar {
+  background-color: var(--primary-color);
+  color: var(--light-color);
+}
+.crm-navbar .crm-menu a,
+.crm-navbar .crm-menu .btn-secondary {
+  color: var(--light-color);
+  margin-left: 1rem;
+}
+.crm-navbar .crm-menu a:hover {
+  text-decoration: underline;
+}
+
+.crm-navbar .btn-secondary {
+  border-color: var(--light-color);
+  color: var(--light-color);
+}
+.crm-navbar .btn-secondary:hover {
+  background-color: var(--light-color);
+  color: var(--primary-color);
+}
