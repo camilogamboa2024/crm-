@@ -1,55 +1,88 @@
-# 🚗 Gamboa Rental Cars - CRM
+# 🚗 Gamboa Rental Cars — Web + CRM (Django)
 
-Sistema de gestión de relaciones con clientes (CRM) y administración de flota para la empresa de renta de vehículos **Gamboa Rental Cars**. Este proyecto permite gestionar el inventario de vehículos, reservas y clientes.
+Sistema completo para **Gamboa Rental Cars** que incluye:
 
-## 📋 Características
+- 🌐 **Sitio público**: Home, buscador de vehículos (`/buscar/`), checkout de reserva estilo “Multialquileres”.
+- 🧠 **CRM / Panel interno**: administración de flota, clientes y reservas.
+- 🧾 **Contrato**: vista pública del contrato (`/contrato/`).
 
-* **Gestión de Flota:** Control de vehículos (Picanto, Sonet, K3, etc.), estados (disponible, rentado) y precios.
-* **Buscador:** Filtrado de vehículos por modelo o disponibilidad.
-* **Gestión de Clientes:** Registro y administración de datos de clientes.
-* **Reservas:** Sistema para crear y dar seguimiento a las reservas.
+> Proyecto local actual: **`gamboa_site (2)`**  
+> Stack: **Django 4.2 + HTML + Bootstrap/Tailwind (CDN) + SQLite (dev)**
 
-## 🛠️ Tecnologías
+---
 
-* **Python** 3.11+
-* **Django** 4.2
-* **HTML5 / CSS3** (Diseño responsivo)
-* **SQLite** (Base de datos por defecto)
+## ✨ Funcionalidades principales
 
-## 🚀 Instalación y Uso
+### Sitio público
+- ✅ **Home** (`/`) con branding y acceso rápido.
+- ✅ **Buscador tipo rentadora** (`/buscar/`)
+  - Búsqueda por fechas y pickup
+  - Filtros por marca y rango de precio
+  - Cálculo de total por días
+- ✅ **Reserva pública (Checkout)** (`/crm/public/reserve/`)
+  - Formulario de conductor (izquierda)
+  - Resumen de reserva (derecha): días, tarifa, subtotal, ITBMS 7%, total
+  - Valida disponibilidad (si el carro ya está reservado en esas fechas)
+- ✅ **Confirmación de reserva** (`/crm/public/reserve/success/`)
 
-Sigue estos pasos para correr el proyecto en tu máquina local:
+### CRM (Panel interno)
+- ✅ **Flota**: crear/editar vehículos, tarifa diaria, estado, placa.
+- ✅ **Clientes**: crear/editar clientes.
+- ✅ **Reservas**: crear/editar reservas, estado.
+- ✅ Rutas claras y separadas del sitio público.
 
-1.  **Clonar el repositorio:**
-    ```bash
-    git clone [https://github.com/camilogamboa2024/crm.git](https://github.com/camilogamboa2024/crm.git)
-    cd crm
-    ```
+---
 
-2.  **Crear y activar un entorno virtual:**
-    ```bash
-    python -m venv .venv
-    source .venv/bin/activate  # En Linux/Mac
-    # .venv\Scripts\activate   # En Windows
-    ```
+## 🧱 Estructura del proyecto
 
-3.  **Instalar dependencias:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+- `gamboa_project/` → configuración del proyecto Django (urls, settings, wsgi/asgi)
+- `crm/` → app principal del CRM (models, forms, views, urls)
+- `templates/` → templates públicos (home, search, contrato, etc.)
+- `crm/templates/crm/` → templates del CRM y checkout público
+- `static/` → assets (logo, imágenes, js/css si aplica)
 
-4.  **Aplicar migraciones:**
-    ```bash
-    python manage.py migrate
-    ```
+---
 
-5.  **Correr el servidor:**
-    ```bash
-    python manage.py runserver
-    ```
+## ⚙️ Requisitos
 
-Visita `http://127.0.0.1:8000/` en tu navegador.
+- **Python 3.11+**
+- **Django 4.2.x**
+- **SQLite** (incluida por defecto en Python)
 
-## 👤 Autor
+---
 
-**Christian Camilo Marmolejo Gamboa**
+## 🚀 Instalación y ejecución (Local) — INSTRUCCIONES COMPLETAS (TODO JUNTO)
+
+> Nota: si en tu repo NO existe `requirements.txt`, instala Django directo como aparece abajo.
+
+```bash
+# 1) Clonar repo
+git clone https://github.com/camilogamboa2024/crm-.git
+cd "gamboa_site (2)"  # si tu carpeta local se llama así
+
+# 2) Crear y activar entorno virtual
+python3 -m venv .venv
+source .venv/bin/activate
+python -m ensurepip --upgrade
+python -m pip install --upgrade pip
+
+# 3) Instalar dependencias
+pip install "Django>=4.2,<5.0"
+
+# 4) Migraciones + cargar data inicial
+python manage.py makemigrations crm
+python manage.py migrate
+python manage.py loaddata crm/fixtures/initial_cars.json
+
+# 5) Crear superusuario (CRM/Admin)
+python manage.py createsuperuser
+
+# 6) Ejecutar el servidor
+python manage.py runserver
+
+
+👥 Equipo
+
+Christian Camilo Marmolejo Gamboa — Founder / Dev
+
+Stiben García Cartagena — Developer
