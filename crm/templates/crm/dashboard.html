@@ -1,0 +1,52 @@
+{% extends "crm/base.html" %}
+
+{% block content %}
+<div class="py-4">
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h1 class="h3 mb-1">Dashboard</h1>
+      <p class="text-muted mb-0">Resumen del mes actual ({{ today|date:"F Y" }}).</p>
+    </div>
+    <span class="badge text-bg-light border">Actualizado: {{ today|date:"d/m/Y" }}</span>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-md-6 col-xl-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-muted mb-1">💰 Ingresos Mes</p>
+          <h3 class="fw-bold">${{ revenue_month }}</h3>
+          <p class="small text-muted mb-0">Suma total de reservas activas.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-muted mb-1">🚗 Disponibilidad Hoy</p>
+          <h3 class="fw-bold">{{ available_today }}</h3>
+          <p class="small text-muted mb-0">Vehículos libres hoy.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-muted mb-1">📅 Próximas Entregas (Hoy)</p>
+          <h3 class="fw-bold">{{ upcoming_deliveries }}</h3>
+          <p class="small text-muted mb-0">Reservas con inicio hoy.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+      <div class="card shadow-sm h-100 border-danger">
+        <div class="card-body">
+          <p class="text-muted mb-1">📉 Reservas Canceladas (Mes)</p>
+          <h3 class="fw-bold text-danger">{{ cancelled_month }}</h3>
+          <p class="small text-muted mb-0">Cancelaciones en el mes actual.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
