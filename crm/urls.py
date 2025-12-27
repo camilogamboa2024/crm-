@@ -7,6 +7,9 @@ app_name = "crm"
 
 urlpatterns = [
     path("", views.crm_root, name="root"),
+    path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
+    path("calendar/", views.CalendarView.as_view(), name="calendar"),
+    path("api/reservations/", views.reservation_events_api, name="reservation_events_api"),
 
     path("cars/", views.CarListView.as_view(), name="car_list"),
     path("cars/add/", views.CarCreateView.as_view(), name="car_add"),
@@ -19,6 +22,16 @@ urlpatterns = [
     path("reservations/", views.ReservationListView.as_view(), name="reservation_list"),
     path("reservations/add/", views.ReservationCreateView.as_view(), name="reservation_add"),
     path("reservations/<int:pk>/edit/", views.ReservationUpdateView.as_view(), name="reservation_edit"),
+    path(
+        "reservations/<int:pk>/contract/",
+        views.ReservationContractView.as_view(),
+        name="reservation_contract",
+    ),
+    path(
+        "reservations/export/",
+        views.ExportReservationsCsvView.as_view(),
+        name="reservation_export_csv",
+    ),
 
     # ✅ checkout público
     path("public/reserve/", views.PublicReservationView.as_view(), name="public_reservation"),

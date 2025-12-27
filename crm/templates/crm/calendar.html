@@ -1,0 +1,32 @@
+{% extends "crm/base.html" %}
+
+{% block page_title %}Calendario de Flota{% endblock %}
+{% block page_subtitle %}Visualiza la ocupación de reservas en el mes.{% endblock %}
+
+{% block content %}
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <div id="crm-calendar"></div>
+    </div>
+  </div>
+
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const calendarEl = document.getElementById('crm-calendar');
+      const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        height: 'auto',
+        events: '{% url "crm:reservation_events_api" %}',
+        eventClick: function(info) {
+          if (info.event.url) {
+            info.jsEvent.preventDefault();
+            window.location.href = info.event.url;
+          }
+        }
+      });
+      calendar.render();
+    });
+  </script>
+{% endblock %}

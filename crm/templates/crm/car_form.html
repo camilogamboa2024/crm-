@@ -1,29 +1,61 @@
 {% extends 'crm/base.html' %}
-{# Importing crispy tags is unnecessary since we do not use django-crispy-forms. #}
+
+{% block page_title %}
+  {% if object %}Editar vehículo{% else %}Agregar vehículo{% endif %}
+{% endblock %}
+{% block page_subtitle %}Gestiona la información de tu flota.{% endblock %}
+
 {% block content %}
-  {% if object %}
-    <h1>Editar vehículo</h1>
-  {% else %}
-    <h1>Agregar vehículo</h1>
-  {% endif %}
-  <form method="post" novalidate>
-    {% csrf_token %}
-    <div class="form-grid">
-      {{ form.non_field_errors }}
-      {% for field in form %}
-        <div class="form-group">
-          {{ field.label_tag }}
-          {{ field }}
-          {% if field.help_text %}
-            <small class="help-text">{{ field.help_text }}</small>
-          {% endif %}
-          {% for error in field.errors %}
-            <p class="error">{{ error }}</p>
-          {% endfor %}
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="row g-3">
+          <div class="col-md-6">
+            {{ form.make.label_tag }}
+            {{ form.make }}
+            {% for error in form.make.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="col-md-6">
+            {{ form.model.label_tag }}
+            {{ form.model }}
+            {% for error in form.model.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="col-md-4">
+            {{ form.year.label_tag }}
+            {{ form.year }}
+            {% for error in form.year.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="col-md-4">
+            {{ form.license_plate.label_tag }}
+            {{ form.license_plate }}
+            {% for error in form.license_plate.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="col-md-4">
+            {{ form.status.label_tag }}
+            {{ form.status }}
+            {% for error in form.status.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="col-md-6">
+            {{ form.daily_rate.label_tag }}
+            {{ form.daily_rate }}
+            {% if form.daily_rate.help_text %}
+              <small class="text-muted">{{ form.daily_rate.help_text }}</small>
+            {% endif %}
+            {% for error in form.daily_rate.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="col-md-6">
+            {{ form.color.label_tag }}
+            {{ form.color }}
+            {% for error in form.color.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
         </div>
-      {% endfor %}
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <a href="{% url 'crm:car_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
     </div>
-    <button type="submit" class="btn-primary">Guardar</button>
-    <a href="{% url 'crm:car_list' %}" class="btn-secondary">Cancelar</a>
-  </form>
+  </div>
 {% endblock %}

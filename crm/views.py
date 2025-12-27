@@ -10,16 +10,28 @@ Home -> /buscar (resultados + filtros) -> /crm/public/reserve/ (checkout) -> suc
 from __future__ import annotations
 
 import json
-from datetime import date
+from calendar import monthrange
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
+from io import BytesIO
+import csv
 
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.messages.views import SuccessMessageMixin
+from django.conf import settings
+from django.core.exceptions import PermissionDenied
 from django.core.serializers.json import DjangoJSONEncoder
-from django.http import JsonResponse
+from django.db.models import DecimalField, Q, Sum
+from django.db.models.functions import Coalesce
+from django.core.mail import EmailMessage
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+from django.template.loader import get_template
+from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views.decorators.http import require_POST
-from django.views.generic import CreateView, FormView, ListView, UpdateView
+from django.views.generic import CreateView, FormView, ListView, TemplateView, UpdateView, View
+from xhtml2pdf import pisa
 
 from .forms import CarForm, CustomerForm, PublicReservationForm, ReservationForm
 from .models import Car, Customer, Reservation
@@ -30,13 +42,111 @@ from .models import Car, Customer, Reservation
 # -----------------------------------------------------------------------------
 
 
-class CarListView(ListView):
+def _is_manager(user) -> bool:
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    return user.groups.filter(name="Gerencia").exists()
+
+
+class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    raise_exception = True
+
+    def test_func(self) -> bool:
+        return bool(self.request.user and self.request.user.is_staff)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["is_manager"] = _is_manager(self.request.user)
+        return context
+
+
+class DashboardView(StaffRequiredMixin, TemplateView):
+    template_name = "crm/dashboard.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not _is_manager(request.user):
+            return redirect("crm:reservation_list")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        today = timezone.localdate()
+        month_end_day = monthrange(today.year, today.month)[1]
+        month_start = today.replace(day=1)
+        month_end = today.replace(day=month_end_day)
+
+        revenue_month = (
+            Reservation.objects.filter(start_date__range=(month_start, month_end))
+            .exclude(status="cancelled")
+            .aggregate(
+                total=Coalesce(
+                    Sum("total_cost"),
+                    Decimal("0.00"),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
+                )
+            )["total"]
+        )
+
+        reservations_month = Reservation.objects.filter(
+            start_date__range=(month_start, month_end)
+        ).exclude(status="cancelled").count()
+
+        cancelled_month = Reservation.objects.filter(
+            status="cancelled",
+            start_date__range=(month_start, month_end),
+        ).count()
+
+        available_today = (
+            Car.objects.filter(status="available")
+            .exclude(id__in=_conflicting_car_ids(today, today))
+            .count()
+        )
+
+        latest_reservations = (
+            Reservation.objects.select_related("car", "customer")
+            .order_by("-start_date")[:5]
+        )
+
+        context.update(
+            {
+                "today": today,
+                "revenue_month": revenue_month,
+                "reservations_month": reservations_month,
+                "available_today": available_today,
+                "cancelled_month": cancelled_month,
+                "latest_reservations": latest_reservations,
+            }
+        )
+        return context
+
+
+class CarListView(StaffRequiredMixin, ListView):
     model = Car
     template_name = "crm/car_list.html"
     context_object_name = "cars"
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        query = (self.request.GET.get("q") or "").strip()
+        if query:
+            queryset = queryset.filter(
+                Q(make__icontains=query)
+                | Q(model__icontains=query)
+                | Q(license_plate__icontains=query)
+                | Q(color__icontains=query)
+            )
+        return queryset
 
-class CarCreateView(SuccessMessageMixin, CreateView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["query"] = (self.request.GET.get("q") or "").strip()
+        return context
+
+
+class CarCreateView(StaffRequiredMixin, SuccessMessageMixin, CreateView):
     model = Car
     form_class = CarForm
     template_name = "crm/car_form.html"
@@ -44,7 +154,7 @@ class CarCreateView(SuccessMessageMixin, CreateView):
     success_message = "Vehículo agregado correctamente."
 
 
-class CarUpdateView(SuccessMessageMixin, UpdateView):
+class CarUpdateView(StaffRequiredMixin, SuccessMessageMixin, UpdateView):
     model = Car
     form_class = CarForm
     template_name = "crm/car_form.html"
@@ -52,13 +162,30 @@ class CarUpdateView(SuccessMessageMixin, UpdateView):
     success_message = "Vehículo actualizado correctamente."
 
 
-class CustomerListView(ListView):
+class CustomerListView(StaffRequiredMixin, ListView):
     model = Customer
     template_name = "crm/customer_list.html"
     context_object_name = "customers"
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        query = (self.request.GET.get("q") or "").strip()
+        if query:
+            queryset = queryset.filter(
+                Q(first_name__icontains=query)
+                | Q(last_name__icontains=query)
+                | Q(email__icontains=query)
+                | Q(phone__icontains=query)
+            )
+        return queryset
 
-class CustomerCreateView(SuccessMessageMixin, CreateView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["query"] = (self.request.GET.get("q") or "").strip()
+        return context
+
+
+class CustomerCreateView(StaffRequiredMixin, SuccessMessageMixin, CreateView):
     model = Customer
     form_class = CustomerForm
     template_name = "crm/customer_form.html"
@@ -66,7 +193,7 @@ class CustomerCreateView(SuccessMessageMixin, CreateView):
     success_message = "Cliente agregado correctamente."
 
 
-class CustomerUpdateView(SuccessMessageMixin, UpdateView):
+class CustomerUpdateView(StaffRequiredMixin, SuccessMessageMixin, UpdateView):
     model = Customer
     form_class = CustomerForm
     template_name = "crm/customer_form.html"
@@ -74,21 +201,45 @@ class CustomerUpdateView(SuccessMessageMixin, UpdateView):
     success_message = "Cliente actualizado correctamente."
 
 
-class ReservationListView(ListView):
+class ReservationListView(StaffRequiredMixin, ListView):
     model = Reservation
     template_name = "crm/reservation_list.html"
     context_object_name = "reservations"
 
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related("car", "customer")
+        query = (self.request.GET.get("q") or "").strip()
+        if query:
+            queryset = queryset.filter(
+                Q(customer__first_name__icontains=query)
+                | Q(customer__last_name__icontains=query)
+                | Q(customer__email__icontains=query)
+                | Q(car__make__icontains=query)
+                | Q(car__model__icontains=query)
+                | Q(car__license_plate__icontains=query)
+            )
+        return queryset
 
-class ReservationCreateView(SuccessMessageMixin, CreateView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["query"] = (self.request.GET.get("q") or "").strip()
+        return context
+
+
+class ReservationCreateView(StaffRequiredMixin, SuccessMessageMixin, CreateView):
     model = Reservation
     form_class = ReservationForm
     template_name = "crm/reservation_form.html"
     success_url = reverse_lazy("crm:reservation_list")
     success_message = "Reserva registrada correctamente."
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        _send_reservation_confirmation(self.object)
+        return response
 
-class ReservationUpdateView(SuccessMessageMixin, UpdateView):
+
+class ReservationUpdateView(StaffRequiredMixin, SuccessMessageMixin, UpdateView):
     model = Reservation
     form_class = ReservationForm
     template_name = "crm/reservation_form.html"
@@ -97,8 +248,92 @@ class ReservationUpdateView(SuccessMessageMixin, UpdateView):
 
 
 def crm_root(request):
-    """/crm/ -> redirige al listado de vehículos."""
-    return redirect("crm:car_list")
+    """/crm/ -> redirige según rol."""
+    if not request.user.is_authenticated:
+        return redirect(settings.LOGIN_URL)
+    if not request.user.is_staff:
+        raise PermissionDenied
+    if _is_manager(request.user):
+        return redirect("crm:dashboard")
+    return redirect("crm:reservation_list")
+
+
+class ReservationContractView(StaffRequiredMixin, View):
+    def get(self, request, pk):
+        reservation = get_object_or_404(
+            Reservation.objects.select_related("customer", "car"),
+            pk=pk,
+        )
+        template = get_template("crm/reservation_contract.html")
+        context = {
+            "reservation": reservation,
+            "customer": reservation.customer,
+            "car": reservation.car,
+        }
+        html = template.render(context)
+        pdf_bytes = _render_contract_pdf(html)
+        if pdf_bytes is None:
+            return HttpResponse("Error al generar el PDF.", status=500)
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="reserva-{reservation.id}.pdf"'
+        return response
+
+
+class CalendarView(StaffRequiredMixin, TemplateView):
+    template_name = "crm/calendar.html"
+
+
+def reservation_events_api(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+    if not request.user.is_staff:
+        raise PermissionDenied
+    events = []
+    reservations = Reservation.objects.select_related("car", "customer").exclude(status="cancelled")
+    color_map = {
+        "booked": "#3699ff",
+        "pending": "#3699ff",
+        "cancelled": "#f64e60",
+        "maintenance": "#ffc107",
+        "completed": "#1bc5bd",
+        "in_progress": "#0d6efd",
+    }
+    for reservation in reservations:
+        end_date = reservation.end_date + timedelta(days=1)
+        color = color_map.get(reservation.status, "#3699ff")
+        events.append(
+            {
+                "title": f"{reservation.car.make} {reservation.car.model} - {reservation.customer}",
+                "start": reservation.start_date.isoformat(),
+                "end": end_date.isoformat(),
+                "backgroundColor": color,
+                "borderColor": color,
+                "url": reverse("crm:reservation_edit", args=[reservation.id]),
+            }
+        )
+    return JsonResponse(events, safe=False)
+
+
+class ExportReservationsCsvView(StaffRequiredMixin, View):
+    def get(self, request):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="reservas.csv"'
+        writer = csv.writer(response)
+        writer.writerow(["ID", "Fecha Inicio", "Fecha Fin", "Cliente", "Auto", "Total", "Estado"])
+        reservations = Reservation.objects.select_related("customer", "car").order_by("-start_date")
+        for reservation in reservations:
+            writer.writerow(
+                [
+                    reservation.id,
+                    reservation.start_date,
+                    reservation.end_date,
+                    str(reservation.customer),
+                    str(reservation.car),
+                    reservation.total_cost,
+                    reservation.get_status_display(),
+                ]
+            )
+        return response
 
 
 # -----------------------------------------------------------------------------
@@ -145,6 +380,40 @@ def _serialize_cars(qs):
             }
         )
     return out
+
+
+def _render_contract_pdf(html: str) -> bytes | None:
+    buffer = BytesIO()
+    pisa_status = pisa.CreatePDF(html, dest=buffer)
+    if pisa_status.err:
+        return None
+    return buffer.getvalue()
+
+
+def _send_reservation_confirmation(reservation: Reservation) -> None:
+    try:
+        template = get_template("crm/reservation_contract.html")
+        html = template.render(
+            {
+                "reservation": reservation,
+                "customer": reservation.customer,
+                "car": reservation.car,
+            }
+        )
+        pdf_bytes = _render_contract_pdf(html)
+        if pdf_bytes is None:
+            return
+        subject = "Reserva Confirmada"
+        body = "Gracias por reservar con Gamboa Rental Cars. Adjuntamos el contrato en PDF."
+        message = EmailMessage(
+            subject=subject,
+            body=body,
+            to=[reservation.customer.email],
+        )
+        message.attach(f"reserva-{reservation.id}.pdf", pdf_bytes, "application/pdf")
+        message.send(fail_silently=True)
+    except Exception:
+        return
 
 
 def _create_public_reservation(
@@ -226,9 +495,7 @@ def search_view(request):
 
     days = None
     if start_date and end_date and end_date >= start_date:
-        days = (end_date - start_date).days
-        if days == 0:
-            days = 1
+        days = (end_date - start_date).days + 1
         qs = qs.exclude(id__in=_conflicting_car_ids(start_date, end_date))
 
     if selected_makes:
@@ -329,7 +596,7 @@ class PublicReservationView(FormView):
         total = Decimal("0.00")
 
         if car and start_date and end_date:
-            delta = (end_date - start_date).days
+            delta = (end_date - start_date).days + 1
             rental_days = max(1, delta)
 
             daily_rate = (car.daily_rate or Decimal("0.00"))
@@ -381,6 +648,7 @@ class PublicReservationView(FormView):
             form.add_error(None, str(e))
             return self.form_invalid(form)
 
+        _send_reservation_confirmation(reservation)
         return redirect(f"{self.success_url}?rid={reservation.id}")
 
 
