@@ -33,10 +33,30 @@
           {{ form.end_date.as_hidden }}
 
           <div class="row g-3">
-            <div class="col-md-4">{{ form.first_name }}</div>
-            <div class="col-md-4">{{ form.last_name }}</div>
-            <div class="col-md-4">{{ form.email }}</div>
-            <div class="col-md-6">{{ form.phone }}</div>
+            <div class="col-md-4">
+              {{ form.first_name }}
+              {% if form.first_name.errors %}
+                <div class="text-danger small">{{ form.first_name.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              {{ form.last_name }}
+              {% if form.last_name.errors %}
+                <div class="text-danger small">{{ form.last_name.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              {{ form.email }}
+              {% if form.email.errors %}
+                <div class="text-danger small">{{ form.email.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              {{ form.phone }}
+              {% if form.phone.errors %}
+                <div class="text-danger small">{{ form.phone.errors.0 }}</div>
+              {% endif %}
+            </div>
           </div>
 
           <div class="form-check mt-4">

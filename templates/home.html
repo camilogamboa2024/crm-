@@ -3,237 +3,220 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Gamboa Rental Cars</title>
-
-    <!-- Tailwind (CDN) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- React 18 UMD -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel (JSX en el navegador; ok para demo/prototipo) -->
-    <script crossorigin src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
   </head>
 
-  <body class="bg-gray-50 text-gray-900">
-    <div id="root"></div>
+  <body class="bg-light">
+    <nav class="navbar navbar-expand-lg bg-white shadow-sm fixed-top">
+      <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+          <img src="{% static 'images/logo.png' %}" alt="Logo" height="36" />
+          <span class="fw-semibold text-dark">Gamboa Rental</span>
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto gap-lg-3">
+            <li class="nav-item"><a class="nav-link" href="#vehiculos">Vehículos</a></li>
+            <li class="nav-item"><a class="nav-link" href="#beneficios">Beneficios</a></li>
+            <li class="nav-item"><a class="nav-link" href="#contacto">Contacto</a></li>
+            <li class="nav-item"><a class="nav-link fw-semibold" href="/buscar/">Reservar</a></li>
+            <li class="nav-item"><a class="nav-link" href="/crm/">CRM</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
 
-    <script id="cars-data" type="application/json">{{ cars|safe }}</script>
-
-    <script type="text/babel">
-      const carsData = JSON.parse(document.getElementById('cars-data').textContent || '[]');
-
-      function daysBetweenInclusive(startISO, endISO) {
-        if (!startISO || !endISO) return 0;
-        const s = new Date(startISO + 'T00:00:00');
-        const e = new Date(endISO + 'T00:00:00');
-        const diff = Math.round((e - s) / (1000 * 60 * 60 * 24));
-        return diff >= 0 ? diff + 1 : 0;
-      }
-
-      function Navbar() {
-        const links = [
-          { href: '#vehiculos', label: 'Vehículos' },
-          { href: '#beneficios', label: 'Beneficios' },
-          { href: '#contacto', label: 'Contacto' },
-          { href: '/buscar/', label: 'Reservar' },
-          { href: '/crm/', label: 'CRM' },
-          { href: '/contrato/', label: 'Contrato' },
-        ];
-        return (
-          <header className="bg-white shadow fixed w-full z-20">
-            <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-              <a href="/" className="flex items-center gap-2">
-                <img src="{% static 'images/logo.png' %}" alt="Logo" className="h-8 w-auto" />
-                <span className="font-semibold text-lg text-gray-700 hidden sm:block">Gamboa Rental</span>
-              </a>
-              <nav className="hidden md:flex gap-6">
-                {links.map((l) => (
-                  <a key={l.href} href={l.href} className="text-sm font-medium text-gray-600 hover:text-gray-900">
-                    {l.label}
-                  </a>
-                ))}
-              </nav>
-            </div>
-          </header>
-        );
-      }
-
-      function CarCard({ car, startDate, endDate }) {
-        const params = new URLSearchParams({
-          pickup: 'Panamá',
-          start_date: startDate || '',
-          end_date: endDate || '',
-          car_id: String(car.id),
-        });
-        return (
-          <div className="bg-white rounded-2xl shadow overflow-hidden">
-            <img src={car.image_url} alt={car.name} className="w-full h-40 object-cover" />
-            <div className="p-4">
-              <div className="font-semibold">{car.name}</div>
-              <div className="text-sm text-gray-500">Color: {car.color} · {car.category}</div>
-              <div className="mt-2 text-sm">
-                <span className="font-semibold">${car.daily_rate}</span> / día
-              </div>
-              <a
-                href={`/buscar/?${params.toString()}`}
-                className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 font-semibold"
-              >
-                Reservar
-              </a>
+    <header class="pt-5">
+      <div class="container pt-5">
+        <div class="row align-items-center g-4">
+          <div class="col-lg-6">
+            <span class="badge text-bg-primary mb-3">Reserva rápida</span>
+            <h1 class="display-5 fw-bold">Tu viaje comienza aquí</h1>
+            <p class="lead text-muted">
+              Reserva tu vehículo ideal con Gamboa Rental Cars y descubre la libertad de conducir.
+            </p>
+            <div class="d-flex gap-3 flex-wrap">
+              <a class="btn btn-primary btn-lg" href="/buscar/">Ver disponibilidad</a>
+              <a class="btn btn-outline-secondary btn-lg" href="#contacto">Hablar con un asesor</a>
             </div>
           </div>
-        );
-      }
-
-      function App() {
-        const [pickup, setPickup] = React.useState('Panamá');
-        const [startDate, setStartDate] = React.useState('');
-        const [endDate, setEndDate] = React.useState('');
-        const [msg, setMsg] = React.useState('');
-
-        const quote = () => {
-          setMsg('');
-          if (!startDate || !endDate) {
-            setMsg('Selecciona la fecha de inicio y la fecha de fin.');
-            return;
-          }
-          if (daysBetweenInclusive(startDate, endDate) <= 0) {
-            setMsg('La fecha de fin debe ser igual o posterior a la fecha de inicio.');
-            return;
-          }
-          const params = new URLSearchParams({
-            pickup: pickup || 'Panamá',
-            start_date: startDate,
-            end_date: endDate,
-          });
-          window.location.href = `/buscar/?${params.toString()}`;
-        };
-
-        return (
-          <div className="min-h-screen">
-            <Navbar />
-
-            {/* Hero */}
-            <section className="pt-24">
-              <div className="max-w-7xl mx-auto px-4">
-                <div className="rounded-3xl bg-gradient-to-r from-blue-700 to-teal-600 text-white p-8 md:p-12 shadow">
-                  <div className="max-w-3xl">
-                    <h1 className="text-3xl md:text-5xl font-extrabold leading-tight">Tu viaje comienza aquí</h1>
-                    <p className="mt-3 text-white/90">
-                      Reserva tu vehículo ideal con Gamboa Rental Cars y descubre la libertad de conducir.
-                    </p>
-
-                    <div className="mt-6 bg-white/10 backdrop-blur rounded-2xl p-4 md:p-5">
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                        <input
-                          className="rounded-xl px-4 py-3 text-gray-900"
-                          value={pickup}
-                          onChange={(e) => setPickup(e.target.value)}
-                          placeholder="Lugar (Ej. Panamá)"
-                        />
-                        <input
-                          className="rounded-xl px-4 py-3 text-gray-900"
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                        />
-                        <input
-                          className="rounded-xl px-4 py-3 text-gray-900"
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
-                        />
-                        <button
-                          onClick={quote}
-                          className="rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 font-semibold"
-                        >
-                          Cotizar
-                        </button>
-                      </div>
-                      {msg ? <div className="mt-2 text-sm text-yellow-100">{msg}</div> : null}
-                    </div>
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+              <div class="card-body p-4">
+                <h2 class="h5 fw-semibold mb-3">Cotiza tu reserva</h2>
+                <form action="/buscar/" method="get" class="row g-3">
+                  <div class="col-12">
+                    <label class="form-label">Lugar de entrega</label>
+                    <input class="form-control" name="pickup" placeholder="Ej. Panamá" value="Panamá" />
                   </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Fecha de inicio</label>
+                    <input class="form-control" type="date" name="start_date" id="start-date" />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Fecha de fin</label>
+                    <input class="form-control" type="date" name="end_date" id="end-date" />
+                  </div>
+                  <div class="col-12">
+                    <div class="alert alert-info py-2 mb-0 d-none" id="duration-alert"></div>
+                  </div>
+                  <div class="col-12">
+                    <button class="btn btn-primary w-100 btn-lg" type="submit">Buscar vehículos</button>
+                  </div>
+                </form>
+                <p class="small text-muted mt-3 mb-0">
+                  * Calculamos los días de renta de forma inclusiva (inicio y fin).
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section id="vehiculos" class="py-5">
+      <div class="container">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+          <div>
+            <h2 class="fw-bold mb-1">Nuestra Flota</h2>
+            <p class="text-muted mb-0">Kia Picanto desde $35/día · Kia Sonet 2024 desde $60/día</p>
+          </div>
+          <a class="btn btn-outline-primary" href="/buscar/">Ver todos</a>
+        </div>
+        <div class="row g-4">
+          {% for car in cars %}
+            <div class="col-sm-6 col-lg-3">
+              <div class="card h-100 shadow-sm border-0">
+                <img src="{% static 'images/car_placeholder.png' %}" class="card-img-top" alt="{{ car.make }} {{ car.model }}" />
+                <div class="card-body">
+                  <h3 class="h6 fw-semibold">{{ car.make }} {{ car.model }} {{ car.year }}</h3>
+                  <p class="text-muted small mb-2">{{ car.color }} · {{ car.license_plate }}</p>
+                  <p class="fw-semibold mb-3">${{ car.daily_rate }} <span class="text-muted fw-normal">/ día</span></p>
+                  <a
+                    class="btn btn-primary w-100"
+                    href="/buscar/?pickup=Panam%C3%A1&start_date=&end_date=&car_id={{ car.id }}"
+                  >
+                    Reservar
+                  </a>
                 </div>
               </div>
-            </section>
+            </div>
+          {% empty %}
+            <div class="col-12">
+              <div class="alert alert-warning">No hay vehículos disponibles en este momento.</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
 
-            {/* Fleet */}
-            <section id="vehiculos" className="py-14">
-              <div className="max-w-7xl mx-auto px-4">
-                <h2 className="text-2xl md:text-3xl font-bold text-center">Nuestra Flota</h2>
-                <p className="text-center text-gray-600 mt-2">Kia Picanto desde $35/día · Kia Sonet 2024 desde $60/día</p>
-                <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {carsData.map((car) => (
-                    <CarCard key={car.id} car={car} startDate={startDate} endDate={endDate} />
-                  ))}
-                </div>
-              </div>
-            </section>
+    <section id="beneficios" class="py-5 bg-white">
+      <div class="container">
+        <h2 class="fw-bold text-center mb-4">¿Por qué elegirnos?</h2>
+        <div class="row g-4">
+          <div class="col-md-4">
+            <div class="border rounded-4 p-4 h-100">
+              <h3 class="h6 fw-semibold">Flota moderna</h3>
+              <p class="text-muted mb-0">Vehículos en excelente estado, listos para tu viaje.</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="border rounded-4 p-4 h-100">
+              <h3 class="h6 fw-semibold">Proceso simple</h3>
+              <p class="text-muted mb-0">Cotiza, filtra y reserva en pocos pasos.</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="border rounded-4 p-4 h-100">
+              <h3 class="h6 fw-semibold">Atención por WhatsApp</h3>
+              <p class="text-muted mb-0">Soporte directo para cerrar tu reserva rápido.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-            {/* Benefits */}
-            <section id="beneficios" className="py-14 bg-white">
-              <div className="max-w-7xl mx-auto px-4">
-                <h2 className="text-2xl md:text-3xl font-bold text-center">¿Por qué elegirnos?</h2>
-                <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="rounded-2xl border p-6">
-                    <h3 className="font-semibold">Flota moderna</h3>
-                    <p className="text-gray-600 mt-2">Vehículos en excelente estado, listos para tu viaje.</p>
-                  </div>
-                  <div className="rounded-2xl border p-6">
-                    <h3 className="font-semibold">Proceso simple</h3>
-                    <p className="text-gray-600 mt-2">Cotiza, filtra y reserva en pocos pasos (sin formularios pesados).</p>
-                  </div>
-                  <div className="rounded-2xl border p-6">
-                    <h3 className="font-semibold">Atención por WhatsApp</h3>
-                    <p className="text-gray-600 mt-2">Soporte directo para cerrar tu reserva rápido.</p>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Contact */}
-            <section id="contacto" className="py-14">
-              <div className="max-w-7xl mx-auto px-4">
-                <div className="bg-white rounded-3xl shadow p-8 md:p-10">
-                  <h2 className="text-2xl md:text-3xl font-bold">Contacto</h2>
-                  <p className="text-gray-600 mt-2">¿Listo para tu próxima aventura? Escríbenos.</p>
-                  <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                    <a className="rounded-xl border px-4 py-3" href="tel:+50762969414">📞 62969414</a>
-                    <a className="rounded-xl border px-4 py-3" href="tel:+50764744304">📞 64744304</a>
-                    <a
-                      className="rounded-xl bg-green-500 hover:bg-green-600 text-white px-4 py-3 font-semibold"
-                      href="https://wa.me/50762969414?text=Hola%20quiero%20reservar%20un%20veh%C3%ADculo"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      WhatsApp
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <footer className="py-8 text-center text-sm text-gray-500">
-              © 2025 Gamboa Rental Cars. Todos los derechos reservados.
-            </footer>
-
-            {/* WhatsApp flotante */}
+    <section id="contacto" class="py-5">
+      <div class="container">
+        <div class="bg-white rounded-4 shadow-sm p-4 p-md-5">
+          <h2 class="fw-bold mb-2">Contacto</h2>
+          <p class="text-muted">¿Listo para tu próxima aventura? Escríbenos.</p>
+          <div class="d-flex flex-column flex-sm-row gap-3 mt-3">
+            <a class="btn btn-outline-secondary" href="tel:+50762969414">📞 62969414</a>
+            <a class="btn btn-outline-secondary" href="tel:+50764744304">📞 64744304</a>
             <a
+              class="btn btn-success"
               href="https://wa.me/50762969414?text=Hola%20quiero%20reservar%20un%20veh%C3%ADculo"
               target="_blank"
               rel="noopener noreferrer"
-              className="fixed right-4 bottom-4 z-40 bg-green-500 hover:bg-green-600 text-white rounded-full px-4 py-3 shadow-lg font-semibold"
             >
-              ¿Necesitas ayuda?
+              WhatsApp
             </a>
           </div>
-        );
+        </div>
+      </div>
+    </section>
+
+    <footer class="py-4 text-center text-muted small">
+      © 2025 Gamboa Rental Cars. Todos los derechos reservados.
+    </footer>
+
+    <a
+      href="https://wa.me/50762969414?text=Hola%20quiero%20reservar%20un%20veh%C3%ADculo"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="btn btn-success shadow position-fixed bottom-0 end-0 m-4"
+    >
+      ¿Necesitas ayuda?
+    </a>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      const startInput = document.getElementById('start-date');
+      const endInput = document.getElementById('end-date');
+      const alertBox = document.getElementById('duration-alert');
+
+      function daysBetweenInclusive(startValue, endValue) {
+        if (!startValue || !endValue) return 0;
+        const start = new Date(`${startValue}T00:00:00`);
+        const end = new Date(`${endValue}T00:00:00`);
+        const diffDays = Math.round((end - start) / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 ? diffDays + 1 : 0;
       }
 
-      const root = ReactDOM.createRoot(document.getElementById('root'));
-      root.render(<App />);
+      function updateDuration() {
+        const days = daysBetweenInclusive(startInput.value, endInput.value);
+        if (days > 0) {
+          alertBox.textContent = `Duración estimada: ${days} día(s).`;
+          alertBox.classList.remove('d-none');
+        } else {
+          alertBox.classList.add('d-none');
+        }
+      }
+
+      startInput.addEventListener('change', updateDuration);
+      endInput.addEventListener('change', updateDuration);
     </script>
   </body>
 </html>
