@@ -16,6 +16,14 @@ from .models import Car, Customer, Reservation
 
 
 class CarForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if isinstance(field.widget, forms.Select):
+                field.widget.attrs.setdefault("class", "form-select")
+            else:
+                field.widget.attrs.setdefault("class", "form-control")
+
     class Meta:
         model = Car
         fields = ['make', 'model', 'year', 'license_plate', 'status', 'daily_rate', 'color']
@@ -26,12 +34,25 @@ class CarForm(forms.ModelForm):
 
 
 class CustomerForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-control")
+
     class Meta:
         model = Customer
         fields = ['first_name', 'last_name', 'email', 'phone', 'address']
 
 
 class ReservationForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if isinstance(field.widget, forms.Select):
+                field.widget.attrs.setdefault("class", "form-select")
+            else:
+                field.widget.attrs.setdefault("class", "form-control")
+
     class Meta:
         model = Reservation
         fields = ['customer', 'car', 'start_date', 'end_date', 'status']

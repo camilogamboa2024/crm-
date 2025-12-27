@@ -1,28 +1,48 @@
 {% extends 'crm/base.html' %}
+
+{% block page_title %}
+  {% if object %}Editar cliente{% else %}Agregar cliente{% endif %}
+{% endblock %}
+{% block page_subtitle %}Actualiza los datos de contacto del cliente.{% endblock %}
+
 {% block content %}
-  {% if object %}
-    <h1>Editar cliente</h1>
-  {% else %}
-    <h1>Agregar cliente</h1>
-  {% endif %}
-  <form method="post" novalidate>
-    {% csrf_token %}
-    <div class="form-grid">
-      {{ form.non_field_errors }}
-      {% for field in form %}
-        <div class="form-group">
-          {{ field.label_tag }}
-          {{ field }}
-          {% if field.help_text %}
-            <small class="help-text">{{ field.help_text }}</small>
-          {% endif %}
-          {% for error in field.errors %}
-            <p class="error">{{ error }}</p>
-          {% endfor %}
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="row g-3">
+          <div class="col-md-6">
+            {{ form.first_name.label_tag }}
+            {{ form.first_name }}
+            {% for error in form.first_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="col-md-6">
+            {{ form.last_name.label_tag }}
+            {{ form.last_name }}
+            {% for error in form.last_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="col-md-6">
+            {{ form.email.label_tag }}
+            {{ form.email }}
+            {% for error in form.email.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="col-md-6">
+            {{ form.phone.label_tag }}
+            {{ form.phone }}
+            {% for error in form.phone.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="col-12">
+            {{ form.address.label_tag }}
+            {{ form.address }}
+            {% for error in form.address.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
         </div>
-      {% endfor %}
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <a href="{% url 'crm:customer_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
     </div>
-    <button type="submit" class="btn-primary">Guardar</button>
-    <a href="{% url 'crm:customer_list' %}" class="btn-secondary">Cancelar</a>
-  </form>
+  </div>
 {% endblock %}

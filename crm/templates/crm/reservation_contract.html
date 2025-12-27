@@ -1,0 +1,74 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Contrato de Reserva</title>
+    <style>
+      body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px; color: #111; }
+      .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+      .logo { height: 50px; }
+      .title { font-size: 20px; font-weight: bold; }
+      .section { margin-bottom: 16px; }
+      .section h3 { margin-bottom: 6px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #d1d5db; padding: 6px; text-align: left; }
+      .totals td { font-weight: bold; }
+      .signature { margin-top: 40px; }
+      .signature-line { margin-top: 20px; border-top: 1px solid #111; width: 240px; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <img class="logo" src="{% static 'images/logo.png' %}" alt="Logo" />
+      <div class="title">Contrato de Reserva #{{ reservation.id }}</div>
+    </div>
+
+    <div class="section">
+      <h3>Datos del cliente</h3>
+      <p><strong>Nombre:</strong> {{ customer.first_name }} {{ customer.last_name }}</p>
+      <p><strong>Email:</strong> {{ customer.email }}</p>
+      <p><strong>Teléfono:</strong> {{ customer.phone }}</p>
+    </div>
+
+    <div class="section">
+      <h3>Datos del vehículo</h3>
+      <p><strong>Vehículo:</strong> {{ car.make }} {{ car.model }} {{ car.year }}</p>
+      <p><strong>Placa:</strong> {{ car.license_plate }}</p>
+      <p><strong>Color:</strong> {{ car.color }}</p>
+    </div>
+
+    <div class="section">
+      <h3>Fechas de la reserva</h3>
+      <p><strong>Inicio:</strong> {{ reservation.start_date|date:"d/m/Y" }}</p>
+      <p><strong>Fin:</strong> {{ reservation.end_date|date:"d/m/Y" }}</p>
+    </div>
+
+    <div class="section">
+      <h3>Desglose de costos</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Concepto</th>
+            <th>Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Total reserva</td>
+            <td>${{ reservation.total_cost }}</td>
+          </tr>
+          <tr class="totals">
+            <td>Total a pagar</td>
+            <td>${{ reservation.total_cost }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="signature">
+      <p><strong>Firma del cliente</strong></p>
+      <div class="signature-line"></div>
+    </div>
+  </body>
+</html>

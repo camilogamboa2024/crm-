@@ -1,8 +1,27 @@
 {% extends 'crm/base.html' %}
+{% block page_title %}Reservas{% endblock %}
+{% block page_subtitle %}Sigue el estado de las reservas en curso.{% endblock %}
+
 {% block content %}
-  <h1>Reservas</h1>
-  <a href="{% url 'crm:reservation_add' %}" class="btn-primary">Crear reserva</a>
-  <table class="table">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div class="d-flex gap-2">
+      <a href="{% url 'crm:reservation_add' %}" class="btn btn-primary">Crear reserva</a>
+      <a href="{% url 'crm:reservation_export_csv' %}" class="btn btn-success btn-sm align-self-center">Exportar CSV</a>
+    </div>
+    <form class="d-flex" method="get">
+      <input
+        class="form-control form-control-sm me-2"
+        type="search"
+        name="q"
+        placeholder="Buscar por cliente o vehículo"
+        value="{{ query }}"
+      />
+      <button class="btn btn-outline-secondary btn-sm" type="submit">Buscar</button>
+    </form>
+  </div>
+  <div class="card shadow-sm border-0">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
     <thead>
       <tr>
         <th>Cliente</th>
@@ -21,15 +40,39 @@
           <td>{{ reservation.car }}</td>
           <td>{{ reservation.start_date }}</td>
           <td>{{ reservation.end_date }}</td>
-          <td>{{ reservation.get_status_display }}</td>
+          <td>
+            {% if reservation.status == 'pending' %}
+              <span class="badge bg-warning text-dark">Pendiente</span>
+            {% elif reservation.status == 'booked' %}
+              <span class="badge bg-info text-dark">Reservado</span>
+            {% elif reservation.status == 'in_progress' %}
+              <span class="badge bg-primary">En curso</span>
+            {% elif reservation.status == 'completed' %}
+              <span class="badge bg-success">Completado</span>
+            {% else %}
+              <span class="badge bg-danger">Cancelado</span>
+            {% endif %}
+          </td>
           <td>${{ reservation.total_cost }}</td>
           <td>
-            <a href="{% url 'crm:reservation_edit' reservation.pk %}" class="btn-secondary">Editar</a>
+            <div class="btn-group btn-group-sm" role="group">
+              <a href="{% url 'crm:reservation_edit' reservation.pk %}" class="btn btn-outline-secondary">Editar</a>
+              <a href="{% url 'crm:reservation_contract' reservation.pk %}" class="btn btn-outline-primary">
+                <i class="bi bi-file-earmark-pdf"></i>
+              </a>
+            </div>
           </td>
         </tr>
       {% empty %}
-        <tr><td colspan="7">No hay reservas registradas.</td></tr>
+        <tr>
+          <td colspan="7" class="text-center py-4 text-muted">
+            <i class="bi bi-calendar-x fs-3 d-block mb-2"></i>
+            No hay reservas registradas todavía.
+          </td>
+        </tr>
       {% endfor %}
     </tbody>
-  </table>
+      </table>
+    </div>
+  </div>
 {% endblock %}

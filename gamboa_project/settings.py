@@ -127,4 +127,10 @@ LOGIN_URL = "/admin/login/"
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", default=False)
-CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS", default=[]) 
+CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS", default=[])
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# Login redirects
+LOGIN_REDIRECT_URL = "/crm/"
+LOGOUT_REDIRECT_URL = "/"

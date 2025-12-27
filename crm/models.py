@@ -72,6 +72,7 @@ class Reservation(models.Model):
     """Represents a booking of a car by a customer."""
 
     STATUS_CHOICES = [
+        ('pending', 'Pendiente'),
         ('booked', 'Reservado'),
         ('in_progress', 'En curso'),
         ('completed', 'Completado'),

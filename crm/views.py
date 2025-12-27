@@ -2,17 +2,16 @@
 crm.views
 
 Vistas del CRM y de la web pública.
-
-Flujo público:
-Home -> /buscar (resultados + filtros) -> /crm/public/reserve/ (checkout) -> success
 """
 
 from __future__ import annotations
 
 import json
 from calendar import monthrange
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
+from io import BytesIO
+import csv
 
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.messages.views import SuccessMessageMixin
@@ -20,14 +19,17 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.db.models import DecimalField, Sum
+from django.db.models import DecimalField, Q, Sum
 from django.db.models.functions import Coalesce
-from django.http import JsonResponse
+from django.core.mail import EmailMessage
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+from django.template.loader import get_template
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from django.views.generic import CreateView, FormView, ListView, TemplateView, UpdateView
+from django.views.generic import CreateView, FormView, ListView, TemplateView, UpdateView, View
+from xhtml2pdf import pisa
 
 from .forms import CarForm, CustomerForm, PublicReservationForm, ReservationForm
 from .models import Car, Customer, Reservation
@@ -124,6 +126,23 @@ class CarListView(StaffRequiredMixin, ListView):
     template_name = "crm/car_list.html"
     context_object_name = "cars"
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        query = (self.request.GET.get("q") or "").strip()
+        if query:
+            queryset = queryset.filter(
+                Q(make__icontains=query)
+                | Q(model__icontains=query)
+                | Q(license_plate__icontains=query)
+                | Q(color__icontains=query)
+            )
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["query"] = (self.request.GET.get("q") or "").strip()
+        return context
+
 
 class CarCreateView(StaffRequiredMixin, SuccessMessageMixin, CreateView):
     model = Car
@@ -145,6 +164,23 @@ class CustomerListView(StaffRequiredMixin, ListView):
     model = Customer
     template_name = "crm/customer_list.html"
     context_object_name = "customers"
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        query = (self.request.GET.get("q") or "").strip()
+        if query:
+            queryset = queryset.filter(
+                Q(first_name__icontains=query)
+                | Q(last_name__icontains=query)
+                | Q(email__icontains=query)
+                | Q(phone__icontains=query)
+            )
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["query"] = (self.request.GET.get("q") or "").strip()
+        return context
 
 
 class CustomerCreateView(StaffRequiredMixin, SuccessMessageMixin, CreateView):
@@ -168,6 +204,25 @@ class ReservationListView(StaffRequiredMixin, ListView):
     template_name = "crm/reservation_list.html"
     context_object_name = "reservations"
 
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related("car", "customer")
+        query = (self.request.GET.get("q") or "").strip()
+        if query:
+            queryset = queryset.filter(
+                Q(customer__first_name__icontains=query)
+                | Q(customer__last_name__icontains=query)
+                | Q(customer__email__icontains=query)
+                | Q(car__make__icontains=query)
+                | Q(car__model__icontains=query)
+                | Q(car__license_plate__icontains=query)
+            )
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["query"] = (self.request.GET.get("q") or "").strip()
+        return context
+
 
 class ReservationCreateView(StaffRequiredMixin, SuccessMessageMixin, CreateView):
     model = Reservation
@@ -175,6 +230,11 @@ class ReservationCreateView(StaffRequiredMixin, SuccessMessageMixin, CreateView)
     template_name = "crm/reservation_form.html"
     success_url = reverse_lazy("crm:reservation_list")
     success_message = "Reserva registrada correctamente."
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        _send_reservation_confirmation(self.object)
+        return response
 
 
 class ReservationUpdateView(StaffRequiredMixin, SuccessMessageMixin, UpdateView):
@@ -194,6 +254,84 @@ def crm_root(request):
     if _is_manager(request.user):
         return redirect("crm:dashboard")
     return redirect("crm:reservation_list")
+
+
+class ReservationContractView(StaffRequiredMixin, View):
+    def get(self, request, pk):
+        reservation = get_object_or_404(
+            Reservation.objects.select_related("customer", "car"),
+            pk=pk,
+        )
+        template = get_template("crm/reservation_contract.html")
+        context = {
+            "reservation": reservation,
+            "customer": reservation.customer,
+            "car": reservation.car,
+        }
+        html = template.render(context)
+        pdf_bytes = _render_contract_pdf(html)
+        if pdf_bytes is None:
+            return HttpResponse("Error al generar el PDF.", status=500)
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="reserva-{reservation.id}.pdf"'
+        return response
+
+
+class CalendarView(StaffRequiredMixin, TemplateView):
+    template_name = "crm/calendar.html"
+
+
+def reservation_events_api(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+    if not request.user.is_staff:
+        raise PermissionDenied
+    events = []
+    reservations = Reservation.objects.select_related("car", "customer").exclude(status="cancelled")
+    color_map = {
+        "booked": "#3699ff",
+        "pending": "#3699ff",
+        "cancelled": "#f64e60",
+        "maintenance": "#ffc107",
+        "completed": "#1bc5bd",
+        "in_progress": "#0d6efd",
+    }
+    for reservation in reservations:
+        end_date = reservation.end_date + timedelta(days=1)
+        color = color_map.get(reservation.status, "#3699ff")
+        events.append(
+            {
+                "title": f"{reservation.car.make} {reservation.car.model} - {reservation.customer}",
+                "start": reservation.start_date.isoformat(),
+                "end": end_date.isoformat(),
+                "backgroundColor": color,
+                "borderColor": color,
+                "url": reverse("crm:reservation_edit", args=[reservation.id]),
+            }
+        )
+    return JsonResponse(events, safe=False)
+
+
+class ExportReservationsCsvView(StaffRequiredMixin, View):
+    def get(self, request):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="reservas.csv"'
+        writer = csv.writer(response)
+        writer.writerow(["ID", "Fecha Inicio", "Fecha Fin", "Cliente", "Auto", "Total", "Estado"])
+        reservations = Reservation.objects.select_related("customer", "car").order_by("-start_date")
+        for reservation in reservations:
+            writer.writerow(
+                [
+                    reservation.id,
+                    reservation.start_date,
+                    reservation.end_date,
+                    str(reservation.customer),
+                    str(reservation.car),
+                    reservation.total_cost,
+                    reservation.get_status_display(),
+                ]
+            )
+        return response
 
 
 # -----------------------------------------------------------------------------
@@ -242,6 +380,40 @@ def _serialize_cars(qs):
             }
         )
     return out
+
+
+def _render_contract_pdf(html: str) -> bytes | None:
+    buffer = BytesIO()
+    pisa_status = pisa.CreatePDF(html, dest=buffer)
+    if pisa_status.err:
+        return None
+    return buffer.getvalue()
+
+
+def _send_reservation_confirmation(reservation: Reservation) -> None:
+    try:
+        template = get_template("crm/reservation_contract.html")
+        html = template.render(
+            {
+                "reservation": reservation,
+                "customer": reservation.customer,
+                "car": reservation.car,
+            }
+        )
+        pdf_bytes = _render_contract_pdf(html)
+        if pdf_bytes is None:
+            return
+        subject = "Reserva Confirmada"
+        body = "Gracias por reservar con Gamboa Rental Cars. Adjuntamos el contrato en PDF."
+        message = EmailMessage(
+            subject=subject,
+            body=body,
+            to=[reservation.customer.email],
+        )
+        message.attach(f"reserva-{reservation.id}.pdf", pdf_bytes, "application/pdf")
+        message.send(fail_silently=True)
+    except Exception:
+        return
 
 
 def _create_public_reservation(
@@ -474,6 +646,7 @@ class PublicReservationView(FormView):
             form.add_error(None, str(e))
             return self.form_invalid(form)
 
+        _send_reservation_confirmation(reservation)
         return redirect(f"{self.success_url}?rid={reservation.id}")
 
 

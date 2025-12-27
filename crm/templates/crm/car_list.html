@@ -1,8 +1,24 @@
 {% extends 'crm/base.html' %}
+{% block page_title %}Vehículos{% endblock %}
+{% block page_subtitle %}Administra la flota disponible para reservas.{% endblock %}
+
 {% block content %}
-  <h1>Vehículos</h1>
-  <a href="{% url 'crm:car_add' %}" class="btn-primary">Agregar vehículo</a>
-  <table class="table">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <a href="{% url 'crm:car_add' %}" class="btn btn-primary">Agregar vehículo</a>
+    <form class="d-flex" method="get">
+      <input
+        class="form-control form-control-sm me-2"
+        type="search"
+        name="q"
+        placeholder="Buscar por marca, placa o color"
+        value="{{ query }}"
+      />
+      <button class="btn btn-outline-secondary btn-sm" type="submit">Buscar</button>
+    </form>
+  </div>
+  <div class="card shadow-sm border-0">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
     <thead>
       <tr>
         <th>Marca</th>
@@ -23,15 +39,34 @@
           <td>{{ car.year }}</td>
           <td>{{ car.license_plate }}</td>
           <td>{{ car.color }}</td>
-          <td>{{ car.get_status_display }}</td>
+          <td>
+            {% if car.status == 'available' %}
+              <span class="badge bg-success">Disponible</span>
+            {% elif car.status == 'reserved' %}
+              <span class="badge bg-info text-dark">Reservado</span>
+            {% elif car.status == 'rented' %}
+              <span class="badge bg-primary">En uso</span>
+            {% else %}
+              <span class="badge bg-warning text-dark">Mantenimiento</span>
+            {% endif %}
+          </td>
           <td>${{ car.daily_rate }}</td>
           <td>
-            <a href="{% url 'crm:car_edit' car.pk %}" class="btn-secondary">Editar</a>
+            <div class="btn-group btn-group-sm" role="group">
+              <a href="{% url 'crm:car_edit' car.pk %}" class="btn btn-outline-secondary">Editar</a>
+            </div>
           </td>
         </tr>
       {% empty %}
-        <tr><td colspan="7">No hay vehículos registrados.</td></tr>
+        <tr>
+          <td colspan="8" class="text-center py-4 text-muted">
+            <i class="bi bi-car-front-fill fs-3 d-block mb-2"></i>
+            No hay vehículos registrados aún.
+          </td>
+        </tr>
       {% endfor %}
     </tbody>
-  </table>
+      </table>
+    </div>
+  </div>
 {% endblock %}
