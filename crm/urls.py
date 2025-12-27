@@ -6,7 +6,7 @@ from . import views
 app_name = "crm"
 
 urlpatterns = [
-    path("", views.CrmRootView.as_view(), name="root"),
+    path("", views.crm_root, name="root"),
     path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
 
     path("cars/", views.CarListView.as_view(), name="car_list"),

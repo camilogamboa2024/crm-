@@ -16,6 +16,8 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.messages.views import SuccessMessageMixin
+from django.conf import settings
+from django.core.exceptions import PermissionDenied
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import DecimalField, Sum
@@ -36,15 +38,33 @@ from .models import Car, Customer, Reservation
 # -----------------------------------------------------------------------------
 
 
+def _is_manager(user) -> bool:
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    return user.groups.filter(name="Gerencia").exists()
+
+
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     raise_exception = True
 
     def test_func(self) -> bool:
         return bool(self.request.user and self.request.user.is_staff)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["is_manager"] = _is_manager(self.request.user)
+        return context
+
 
 class DashboardView(StaffRequiredMixin, TemplateView):
     template_name = "crm/dashboard.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not _is_manager(request.user):
+            return redirect("crm:reservation_list")
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -66,14 +86,8 @@ class DashboardView(StaffRequiredMixin, TemplateView):
             )["total"]
         )
 
-        available_today = (
-            Car.objects.filter(status="available")
-            .exclude(id__in=_conflicting_car_ids(today, today))
-            .count()
-        )
-
-        upcoming_deliveries = Reservation.objects.filter(
-            start_date=today,
+        reservations_month = Reservation.objects.filter(
+            start_date__range=(month_start, month_end)
         ).exclude(status="cancelled").count()
 
         cancelled_month = Reservation.objects.filter(
@@ -81,13 +95,25 @@ class DashboardView(StaffRequiredMixin, TemplateView):
             start_date__range=(month_start, month_end),
         ).count()
 
+        available_today = (
+            Car.objects.filter(status="available")
+            .exclude(id__in=_conflicting_car_ids(today, today))
+            .count()
+        )
+
+        latest_reservations = (
+            Reservation.objects.select_related("car", "customer")
+            .order_by("-start_date")[:5]
+        )
+
         context.update(
             {
                 "today": today,
                 "revenue_month": revenue_month,
+                "reservations_month": reservations_month,
                 "available_today": available_today,
-                "upcoming_deliveries": upcoming_deliveries,
                 "cancelled_month": cancelled_month,
+                "latest_reservations": latest_reservations,
             }
         )
         return context
@@ -159,11 +185,15 @@ class ReservationUpdateView(StaffRequiredMixin, SuccessMessageMixin, UpdateView)
     success_message = "Reserva actualizada correctamente."
 
 
-class CrmRootView(StaffRequiredMixin, TemplateView):
-    template_name = "crm/dashboard.html"
-
-    def get(self, request, *args, **kwargs):
+def crm_root(request):
+    """/crm/ -> redirige según rol."""
+    if not request.user.is_authenticated:
+        return redirect(settings.LOGIN_URL)
+    if not request.user.is_staff:
+        raise PermissionDenied
+    if _is_manager(request.user):
         return redirect("crm:dashboard")
+    return redirect("crm:reservation_list")
 
 
 # -----------------------------------------------------------------------------
@@ -265,16 +295,16 @@ def _create_public_reservation(
 
 def home_view(request):
     """
-Home sirve la página pública con listado de vehículos.
-"""
+    Home sirve la página pública con listado de vehículos.
+    """
     cars = Car.objects.all().order_by("make", "model", "year")
     return render(request, "home.html", {"cars": cars})
 
 
 def search_view(request):
     """
-/buscar -> resultados server-side (para evitar pantallazo blanco si falla JS)
-"""
+    /buscar -> resultados server-side (para evitar pantallazo blanco si falla JS)
+    """
     pickup = (request.GET.get("pickup") or "Panamá").strip()
 
     start_raw = request.GET.get("start_date") or ""

@@ -1,11 +1,4 @@
-{#
-  Base template for CRM pages.
-
-  Extends the global styles and provides a consistent navigation bar
-  for managing cars, customers and reservations. Individual pages
-  supply their content via the "content" block.
-#}
-
+{# Base template for CRM pages. #}
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
@@ -19,33 +12,82 @@
       integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
       crossorigin="anonymous"
     />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+    />
     <link rel="stylesheet" href="{% static 'css/style.css' %}" />
   </head>
-  <body>
-    <header class="crm-navbar">
-      <div class="container">
-        <a href="/" class="logo">
-          <img src="{% static 'images/logo.png' %}" alt="Logo" />
-        </a>
-        <nav class="crm-menu">
-          <a href="{% url 'crm:dashboard' %}">Dashboard</a>
-          <a href="{% url 'crm:car_list' %}">Vehículos</a>
-          <a href="{% url 'crm:customer_list' %}">Clientes</a>
-          <a href="{% url 'crm:reservation_list' %}">Reservas</a>
-          <a href="/admin/">Admin</a>
-          <a href="/" class="btn-secondary">Sitio público</a>
+  <body class="crm-body">
+    <div class="crm-shell">
+      <aside class="crm-sidebar">
+        <div class="crm-brand">
+          <a href="/" class="crm-logo">
+            <img src="{% static 'images/logo.png' %}" alt="Logo" />
+            <span>Gamboa CRM</span>
+          </a>
+        </div>
+        <nav class="crm-nav">
+          {% if is_manager %}
+            <a class="crm-link" href="{% url 'crm:dashboard' %}">
+              <i class="bi bi-speedometer2"></i>
+              <span>Dashboard</span>
+            </a>
+          {% endif %}
+          
+          <a class="crm-link" href="{% url 'crm:reservation_list' %}">
+            <i class="bi bi-calendar-check"></i>
+            <span>Reservas</span>
+          </a>
+          <a class="crm-link" href="{% url 'crm:car_list' %}">
+            <i class="bi bi-car-front"></i>
+            <span>Vehículos</span>
+          </a>
+          <a class="crm-link" href="{% url 'crm:customer_list' %}">
+            <i class="bi bi-people"></i>
+            <span>Clientes</span>
+          </a>
+          
+          {% if is_manager %}
+            <a class="crm-link" href="/admin/">
+              <i class="bi bi-shield-lock"></i>
+              <span>Admin</span>
+            </a>
+          {% endif %}
+          
+          <a class="crm-link" href="/">
+            <i class="bi bi-box-arrow-left"></i>
+            <span>Sitio público</span>
+          </a>
         </nav>
+      </aside>
+
+      <div class="crm-main">
+        <header class="crm-topbar">
+          <div>
+            <h1 class="crm-title">{% block page_title %}Panel CRM{% endblock %}</h1>
+            <p class="crm-subtitle">{% block page_subtitle %}{% endblock %}</p>
+          </div>
+          <div class="crm-user">
+            <i class="bi bi-person-circle"></i>
+            <span>{{ request.user.get_full_name|default:request.user.username }}</span>
+          </div>
+        </header>
+
+        <main class="crm-content">
+          {% block content %}{% endblock %}
+        </main>
+
+        <footer class="crm-footer">
+          <p>&copy; 2025 Gamboa Rental Cars | Panel CRM</p>
+        </footer>
       </div>
-    </header>
-    <main class="crm-content">
-      <div class="container">
-        {% block content %}{% endblock %}
-      </div>
-    </main>
-    <footer class="footer">
-      <div class="container">
-        <p>&copy; 2025 Gamboa Rental Cars | Panel CRM</p>
-      </div>
-    </footer>
+    </div>
+    
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
   </body>
 </html>
