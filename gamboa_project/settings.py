@@ -36,7 +36,7 @@ def _env_list(name: str, default: list[str] | None = None) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-dev")
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-clave-fija-desarrollo-gamboa-rental")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = _env_bool("DEBUG", default=False)
