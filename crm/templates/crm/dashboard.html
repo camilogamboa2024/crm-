@@ -1,0 +1,86 @@
+{% extends "crm/base.html" %}
+
+{% block page_title %}Dashboard Ejecutivo{% endblock %}
+{% block page_subtitle %}Resumen financiero y operativo del mes actual.{% endblock %}
+
+{% block content %}
+<div class="crm-grid">
+  <div class="crm-stat-card">
+    <div>
+      <div class="crm-stat-label">Ingresos del mes</div>
+      <div class="crm-stat-value">${{ revenue_month }}</div>
+      <div class="crm-stat-meta">Total de reservas activas</div>
+    </div>
+    <div class="crm-stat-icon">
+      <i class="bi bi-cash-stack"></i>
+    </div>
+  </div>
+  <div class="crm-stat-card">
+    <div>
+      <div class="crm-stat-label">Reservas del mes</div>
+      <div class="crm-stat-value">{{ reservations_month }}</div>
+      <div class="crm-stat-meta">Operaciones confirmadas</div>
+    </div>
+    <div class="crm-stat-icon">
+      <i class="bi bi-graph-up-arrow"></i>
+    </div>
+  </div>
+  <div class="crm-stat-card">
+    <div>
+      <div class="crm-stat-label">Disponibles hoy</div>
+      <div class="crm-stat-value">{{ available_today }}</div>
+      <div class="crm-stat-meta">Flota libre</div>
+    </div>
+    <div class="crm-stat-icon">
+      <i class="bi bi-car-front-fill"></i>
+    </div>
+  </div>
+  <div class="crm-stat-card">
+    <div>
+      <div class="crm-stat-label">Canceladas (mes)</div>
+      <div class="crm-stat-value">{{ cancelled_month }}</div>
+      <div class="crm-stat-meta">Seguimiento de pérdidas</div>
+    </div>
+    <div class="crm-stat-icon">
+      <i class="bi bi-exclamation-triangle"></i>
+    </div>
+  </div>
+</div>
+
+<div class="crm-card mt-4">
+  <div class="crm-card-header">
+    <h2>Últimas 5 reservas</h2>
+    <span class="crm-card-subtitle">Actualizado al {{ today|date:"d/m/Y" }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>Vehículo</th>
+          <th>Fechas</th>
+          <th>Estado</th>
+          <th class="text-end">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for reservation in latest_reservations %}
+          <tr>
+            <td>{{ reservation.customer }}</td>
+            <td>{{ reservation.car }}</td>
+            <td>{{ reservation.start_date|date:"d/m/Y" }} → {{ reservation.end_date|date:"d/m/Y" }}</td>
+            <td>
+              <span class="badge bg-secondary">{{ reservation.get_status_display }}</span>
+            </td>
+            <td class="text-end">${{ reservation.total_cost }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">No hay reservas recientes.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
