@@ -64,7 +64,7 @@
                 <form action="/buscar/" method="get" class="row g-3">
                   <div class="col-12">
                     <label class="form-label">Lugar de entrega</label>
-                    <input class="form-control" name="pickup" placeholder="Ej. Panamá" value="Panamá" />
+                    <input class="form-control" name="pickup" placeholder="Ej. Panamá" />
                   </div>
                   <div class="col-md-6">
                     <label class="form-label">Fecha de inicio</label>
@@ -111,7 +111,7 @@
                   <p class="fw-semibold mb-3">${{ car.daily_rate }} <span class="text-muted fw-normal">/ día</span></p>
                   <a
                     class="btn btn-primary w-100"
-                    href="/buscar/?pickup=Panam%C3%A1&start_date=&end_date=&car_id={{ car.id }}"
+                    href="/buscar/?car_id={{ car.id }}"
                   >
                     Reservar
                   </a>

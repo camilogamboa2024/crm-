@@ -36,9 +36,8 @@ from .models import Car, Customer, Reservation
 
 
 # -----------------------------------------------------------------------------
-# CRM (panel)
+# CRM (panel de administración)
 # -----------------------------------------------------------------------------
-
 
 def _is_manager(user) -> bool:
     if not user or not user.is_authenticated:
@@ -338,7 +337,6 @@ class ExportReservationsCsvView(StaffRequiredMixin, View):
 # Helpers
 # -----------------------------------------------------------------------------
 
-
 def _parse_iso_date(value: str | None) -> date | None:
     if not value:
         return None
@@ -361,7 +359,6 @@ def _conflicting_car_ids(start_date: date, end_date: date) -> list[int]:
 
 
 def _serialize_cars(qs):
-    """Serializa Car queryset a dict listo para JS/React (si lo usas)."""
     out = []
     for car in qs:
         out.append(
@@ -426,7 +423,6 @@ def _create_public_reservation(
     start_date: date,
     end_date: date,
 ) -> Reservation:
-    """Crea Customer + Reservation validando conflicto."""
     if end_date < start_date:
         raise ValueError("Rango de fechas inválido.")
 
@@ -461,13 +457,13 @@ def _create_public_reservation(
 
 
 # -----------------------------------------------------------------------------
-# Web pública
+# Web pública (Actualizado para home.html y search.html)
 # -----------------------------------------------------------------------------
-
 
 def home_view(request):
     """
-    Home sirve la página pública con listado de vehículos.
+    Home page. Renderiza 'home.html' con la lista completa de vehículos
+    para la sección 'Nuestra Flota'.
     """
     cars = Car.objects.all().order_by("make", "model", "year")
     return render(request, "home.html", {"cars": cars})
@@ -475,10 +471,11 @@ def home_view(request):
 
 def search_view(request):
     """
-    /buscar -> resultados server-side (para evitar pantallazo blanco si falla JS)
+    Página de búsqueda y filtros. Soporta filtrar por ID de vehículo
+    (para cuando el usuario viene del Home), además de fechas, marca y precio.
     """
     pickup = (request.GET.get("pickup") or "Panamá").strip()
-
+    
     start_raw = request.GET.get("start_date") or ""
     end_raw = request.GET.get("end_date") or ""
 
@@ -488,13 +485,21 @@ def search_view(request):
     selected_makes = request.GET.getlist("make")
     min_price = request.GET.get("min_price", "")
     max_price = request.GET.get("max_price", "")
+    
+    # Nuevo: Filtro por ID (enlace directo desde el home)
+    car_id = request.GET.get("car_id")
 
     qs = Car.objects.filter(status="available")
 
     days = None
     if start_date and end_date and end_date >= start_date:
         days = (end_date - start_date).days + 1
+        # Excluir autos ocupados en esas fechas
         qs = qs.exclude(id__in=_conflicting_car_ids(start_date, end_date))
+
+    # Si viene un car_id, filtramos para mostrar solo ese (flow "Reservar" desde Home)
+    if car_id:
+        qs = qs.filter(id=car_id)
 
     if selected_makes:
         qs = qs.filter(make__in=selected_makes)
@@ -511,11 +516,10 @@ def search_view(request):
     except ValueError:
         max_price = ""
 
-    # ✅ CLAVE: ordenar por campos reales del modelo (NO "name")
     qs = qs.order_by("make", "model", "year")
-
     cars = list(qs)
 
+    # Calcular precio total si hay días seleccionados
     if days:
         for c in cars:
             c.total_price = round(float(c.daily_rate) * days, 2)
@@ -618,7 +622,6 @@ class PublicReservationView(FormView):
         return ctx
 
     def form_valid(self, form):
-        # checkbox del template (no está en el form)
         if not self.request.POST.get("accept_terms"):
             form.add_error(None, "Debes aceptar los Términos y condiciones.")
             return self.form_invalid(form)
@@ -662,7 +665,6 @@ def public_reservation_success_view(request):
 
 @require_POST
 def public_reservation_api(request):
-    """Endpoint JSON opcional (si luego usas React/JS)."""
     try:
         payload = json.loads(request.body.decode("utf-8"))
     except Exception:
