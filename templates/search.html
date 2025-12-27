@@ -122,7 +122,7 @@
 
                   <div class="d-flex gap-2 mt-3">
                     <!-- ✅ BOTÓN CORRECTO (manda car_id + pickup + start_date + end_date) -->
-                    <a class="btn btn-primary"
+                    <a class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded"
                        href="{% url 'crm:public_reservation' %}?car_id={{ car.id }}&pickup={{ pickup|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}">
                       Reservar ahora
                     </a>

@@ -13,7 +13,6 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -101,15 +100,15 @@ class Reservation(models.Model):
         """Custom validation for reservations."""
         # Ensure the end date is not before the start date
         if self.end_date < self.start_date:
-            raise ValidationError('La fecha de fin no puede ser anterior a la de inicio.')
+            raise models.ValidationError('La fecha de fin no puede ser anterior a la de inicio.')
         # Ensure no overlapping reservations for the same car (excluding self)
         conflict = Reservation.objects.filter(
             car=self.car,
             start_date__lte=self.end_date,
             end_date__gte=self.start_date,
-        ).exclude(pk=self.pk).exclude(status='cancelled').exists()
+        ).exclude(pk=self.pk).exists()
         if conflict:
-            raise ValidationError('El vehículo ya tiene una reserva en el rango seleccionado.')
+            raise models.ValidationError('El vehículo ya tiene una reserva en el rango seleccionado.')
 
     def save(self, *args, **kwargs) -> None:
         """Compute total cost before saving."""
