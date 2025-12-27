@@ -2,9 +2,6 @@
 crm.views
 
 Vistas del CRM y de la web pública.
-
-Flujo público:
-Home -> /buscar (resultados + filtros) -> /crm/public/reserve/ (checkout) -> success
 """
 
 from __future__ import annotations
@@ -21,6 +18,7 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db import transaction
 from django.db.models import DecimalField, Q, Sum
 from django.db.models.functions import Coalesce
 from django.core.mail import EmailMessage
@@ -356,7 +354,9 @@ def _conflicting_car_ids(start_date: date, end_date: date) -> list[int]:
         Reservation.objects.filter(
             start_date__lte=end_date,
             end_date__gte=start_date,
-        ).values_list("car_id", flat=True)
+        )
+        .exclude(status="cancelled")
+        .values_list("car_id", flat=True)
     )
 
 
@@ -432,31 +432,32 @@ def _create_public_reservation(
 
     car = get_object_or_404(Car, id=car_id)
 
-    conflict = Reservation.objects.filter(
-        car=car,
-        start_date__lte=end_date,
-        end_date__gte=start_date,
-    ).exists()
-    if conflict:
-        raise ValueError("El vehículo no está disponible en ese rango.")
+    with transaction.atomic():
+        conflict = Reservation.objects.select_for_update().filter(
+            car=car,
+            start_date__lte=end_date,
+            end_date__gte=start_date,
+        ).exclude(status="cancelled").exists()
+        if conflict:
+            raise ValueError("El vehículo no está disponible en ese rango.")
 
-    customer, _ = Customer.objects.get_or_create(
-        email=email,
-        defaults={"first_name": first_name, "last_name": last_name, "phone": phone},
-    )
-    customer.first_name = first_name
-    customer.last_name = last_name
-    customer.phone = phone
-    customer.save()
+        customer, _ = Customer.objects.get_or_create(
+            email=email,
+            defaults={"first_name": first_name, "last_name": last_name, "phone": phone},
+        )
+        customer.first_name = first_name
+        customer.last_name = last_name
+        customer.phone = phone
+        customer.save()
 
-    reservation = Reservation.objects.create(
-        car=car,
-        customer=customer,
-        start_date=start_date,
-        end_date=end_date,
-        status="pending",
-    )
-    return reservation
+        reservation = Reservation.objects.create(
+            car=car,
+            customer=customer,
+            start_date=start_date,
+            end_date=end_date,
+            status="booked",
+        )
+        return reservation
 
 
 # -----------------------------------------------------------------------------
@@ -466,19 +467,16 @@ def _create_public_reservation(
 
 def home_view(request):
     """
-Home puede seguir como está. Entregamos cars_json por si home.html lo usa.
-"""
-    cars_json = json.dumps(
-        _serialize_cars(Car.objects.all().order_by("make", "model", "year")),
-        cls=DjangoJSONEncoder,
-    )
-    return render(request, "home.html", {"cars": cars_json})
+    Home sirve la página pública con listado de vehículos.
+    """
+    cars = Car.objects.all().order_by("make", "model", "year")
+    return render(request, "home.html", {"cars": cars})
 
 
 def search_view(request):
     """
-/buscar -> resultados server-side (para evitar pantallazo blanco si falla JS)
-"""
+    /buscar -> resultados server-side (para evitar pantallazo blanco si falla JS)
+    """
     pickup = (request.GET.get("pickup") or "Panamá").strip()
 
     start_raw = request.GET.get("start_date") or ""

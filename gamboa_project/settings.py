@@ -130,3 +130,7 @@ SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", default=False)
 CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS", default=[])
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# Login redirects
+LOGIN_REDIRECT_URL = "/crm/"
+LOGOUT_REDIRECT_URL = "/"
