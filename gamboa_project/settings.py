@@ -12,6 +12,7 @@ etc.).
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -35,11 +36,15 @@ def _env_list(name: str, default: list[str] | None = None) -> list[str]:
         return default or []
     return [item.strip() for item in value.split(",") if item.strip()]
 
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-clave-fija-desarrollo-gamboa-rental")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = _env_bool("DEBUG", default=False)
+
+# Detect test runs (so whitenoise manifest doesn't break tests)
+IS_TESTING = "test" in sys.argv
 
 # Allow all hosts during development. Adjust this in production.
 ALLOWED_HOSTS: list[str] = _env_list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
@@ -121,7 +126,16 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# ✅ IMPORTANT:
+# In tests/dev we must NOT enforce the manifest, otherwise templates that reference
+# static files can crash with "Missing staticfiles manifest entry".
+if DEBUG or IS_TESTING:
+    STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
+    WHITENOISE_MANIFEST_STRICT = False
+else:
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    WHITENOISE_MANIFEST_STRICT = True
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
