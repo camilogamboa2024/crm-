@@ -1,0 +1,12 @@
+:root {
+  --purple-primary: #b66dff;
+  --purple-secondary: #f7b7ff;
+  --purple-dark: #6f42c1;
+  --purple-gradient: linear-gradient(135deg, #b66dff 0%, #d47cff 55%, #f7b7ff 100%);
+  --purple-bg: #f4f5fb;
+  --purple-text: #3e4b5b;
+}
+
+.purple-gradient {
+  background: var(--purple-gradient);
+}

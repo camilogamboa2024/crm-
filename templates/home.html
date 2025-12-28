@@ -17,7 +17,7 @@
     <nav class="navbar navbar-expand-lg bg-white shadow-sm fixed-top">
       <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2" href="/">
-          <img src="{% static 'images/logo.png' %}" alt="Logo" height="36" />
+          <img src="{% static 'custom/images/logo.png' %}" alt="Logo" height="36" />
           <span class="fw-semibold text-dark">Gamboa Rental</span>
         </a>
         <button
@@ -104,7 +104,7 @@
           {% for car in cars %}
             <div class="col-sm-6 col-lg-3">
               <div class="card h-100 shadow-sm border-0">
-                <img src="{% static 'images/car_placeholder.png' %}" class="card-img-top" alt="{{ car.make }} {{ car.model }}" />
+                <img src="{% static 'custom/images/car_placeholder.png' %}" class="card-img-top" alt="{{ car.make }} {{ car.model }}" />
                 <div class="card-body">
                   <h3 class="h6 fw-semibold">{{ car.make }} {{ car.model }} {{ car.year }}</h3>
                   <p class="text-muted small mb-2">{{ car.color }} · {{ car.license_plate }}</p>
@@ -163,7 +163,7 @@
             <a class="btn btn-outline-secondary" href="tel:+50764744304">📞 64744304</a>
             <a
               class="btn btn-success"
-              href="https://wa.me/50762969414?text=Hola%20quiero%20reservar%20un%20veh%C3%ADculo"
+              href="https://wa.me/{{ whatsapp_number }}?text=Hola%20quiero%20reservar%20un%20veh%C3%ADculo"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -179,7 +179,7 @@
     </footer>
 
     <a
-      href="https://wa.me/50762969414?text=Hola%20quiero%20reservar%20un%20veh%C3%ADculo"
+      href="https://wa.me/{{ whatsapp_number }}?text=Hola%20quiero%20reservar%20un%20veh%C3%ADculo"
       target="_blank"
       rel="noopener noreferrer"
       class="btn btn-success shadow position-fixed bottom-0 end-0 m-4"

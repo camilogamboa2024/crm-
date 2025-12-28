@@ -2,15 +2,23 @@
 
 {% block page_title %}Calendario de Flota{% endblock %}
 {% block page_subtitle %}Visualiza la ocupación de reservas en el mes.{% endblock %}
+{% block breadcrumbs %}
+  <li class="breadcrumb-item active" aria-current="page">Calendario</li>
+{% endblock %}
 
 {% block content %}
-  <div class="card shadow-sm border-0">
+  <div class="card crm-card">
     <div class="card-body">
       <div id="crm-calendar"></div>
     </div>
   </div>
+{% endblock %}
 
+{% block extra_css %}
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block extra_js %}
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function () {

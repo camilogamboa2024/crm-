@@ -4,9 +4,15 @@
   {% if object %}Editar reserva{% else %}Crear reserva{% endif %}
 {% endblock %}
 {% block page_subtitle %}Registra reservas internas en pocos pasos.{% endblock %}
+{% block breadcrumbs %}
+  <li class="breadcrumb-item"><a href="{% url 'crm:reservation_list' %}">Reservas</a></li>
+  <li class="breadcrumb-item active" aria-current="page">
+    {% if object %}Editar{% else %}Nueva{% endif %}
+  </li>
+{% endblock %}
 
 {% block content %}
-  <div class="card shadow-sm border-0">
+  <div class="card crm-card">
     <div class="card-body">
       <form method="post" novalidate>
         {% csrf_token %}
