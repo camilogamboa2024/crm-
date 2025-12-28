@@ -19,17 +19,20 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.db.models import DecimalField, Q, Sum
+from django.db.models import Count, DecimalField, Q, Sum
 from django.db.models.functions import Coalesce
 from django.core.mail import EmailMessage
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import get_template
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, FormView, ListView, TemplateView, UpdateView, View
-from xhtml2pdf import pisa
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas
+from ratelimit.decorators import ratelimit
 
 from .forms import CarForm, CustomerForm, PublicReservationForm, ReservationForm
 from .models import Car, Customer, Reservation
@@ -75,46 +78,56 @@ class DashboardView(StaffRequiredMixin, TemplateView):
         month_start = today.replace(day=1)
         month_end = today.replace(day=month_end_day)
 
-        revenue_month = (
-            Reservation.objects.filter(start_date__range=(month_start, month_end))
-            .exclude(status="cancelled")
-            .aggregate(
-                total=Coalesce(
-                    Sum("total_cost"),
-                    Decimal("0.00"),
-                    output_field=DecimalField(max_digits=10, decimal_places=2),
-                )
-            )["total"]
-        )
-
-        reservations_month = Reservation.objects.filter(
-            start_date__range=(month_start, month_end)
-        ).exclude(status="cancelled").count()
-
-        cancelled_month = Reservation.objects.filter(
-            status="cancelled",
+        revenue_month = Reservation.objects.filter(
+            status="completed",
             start_date__range=(month_start, month_end),
+        ).aggregate(
+            total=Coalesce(
+                Sum("total_cost"),
+                Decimal("0.00"),
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            )
+        )["total"]
+
+        reservations_active = Reservation.objects.filter(status="in_progress").count()
+
+        fleet_available = Car.objects.filter(status="available").count()
+
+        deliveries_today = Reservation.objects.filter(
+            status="booked",
+            start_date=today,
         ).count()
 
-        available_today = (
-            Car.objects.filter(status="available")
-            .exclude(id__in=_conflicting_car_ids(today, today))
-            .count()
-        )
+        latest_reservations = Reservation.objects.select_related("car", "customer").order_by(
+            "-start_date"
+        )[:5]
 
-        latest_reservations = (
-            Reservation.objects.select_related("car", "customer")
-            .order_by("-start_date")[:5]
+        days_back = 7
+        start_window = today - timedelta(days=days_back - 1)
+        reservations_by_day = (
+            Reservation.objects.filter(start_date__range=(start_window, today))
+            .exclude(status="cancelled")
+            .values("start_date")
+            .annotate(total=Count("id"))
         )
+        counts_by_day = {item["start_date"]: item["total"] for item in reservations_by_day}
+        chart_labels = []
+        chart_values = []
+        for offset in range(days_back):
+            current = start_window + timedelta(days=offset)
+            chart_labels.append(current.strftime("%d/%m"))
+            chart_values.append(int(counts_by_day.get(current, 0)))
 
         context.update(
             {
                 "today": today,
                 "revenue_month": revenue_month,
-                "reservations_month": reservations_month,
-                "available_today": available_today,
-                "cancelled_month": cancelled_month,
+                "reservations_active": reservations_active,
+                "available_today": fleet_available,
+                "deliveries_today": deliveries_today,
                 "latest_reservations": latest_reservations,
+                "chart_labels": json.dumps(chart_labels),
+                "chart_values": json.dumps(chart_values),
             }
         )
         return context
@@ -261,16 +274,7 @@ class ReservationContractView(StaffRequiredMixin, View):
             Reservation.objects.select_related("customer", "car"),
             pk=pk,
         )
-        template = get_template("crm/reservation_contract.html")
-        context = {
-            "reservation": reservation,
-            "customer": reservation.customer,
-            "car": reservation.car,
-        }
-        html = template.render(context)
-        pdf_bytes = _render_contract_pdf(html)
-        if pdf_bytes is None:
-            return HttpResponse("Error al generar el PDF.", status=500)
+        pdf_bytes = _render_contract_pdf(reservation)
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="reserva-{reservation.id}.pdf"'
         return response
@@ -289,7 +293,6 @@ def reservation_events_api(request):
     reservations = Reservation.objects.select_related("car", "customer").exclude(status="cancelled")
     color_map = {
         "booked": "#3699ff",
-        "pending": "#3699ff",
         "cancelled": "#f64e60",
         "maintenance": "#ffc107",
         "completed": "#1bc5bd",
@@ -371,7 +374,7 @@ def _serialize_cars(qs):
                 "license_plate": car.license_plate,
                 "daily_rate": float(car.daily_rate),
                 "name": f"{car.make} {car.model} {car.year}",
-                "image_url": "/static/images/car_placeholder.png",
+                "image_url": "/static/custom/images/car_placeholder.png",
                 "category": "SUV" if (car.model or "").lower() in {"sonet"} else "HATCHBACK",
                 "status": car.status,
             }
@@ -379,27 +382,70 @@ def _serialize_cars(qs):
     return out
 
 
-def _render_contract_pdf(html: str) -> bytes | None:
+def _render_contract_pdf(reservation: Reservation) -> bytes:
     buffer = BytesIO()
-    pisa_status = pisa.CreatePDF(html, dest=buffer)
-    if pisa_status.err:
-        return None
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    y = height - inch
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(inch, y, f"Contrato de Reserva #{reservation.id}")
+
+    y -= 0.5 * inch
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(inch, y, "Datos del cliente")
+    pdf.setFont("Helvetica", 11)
+    y -= 0.25 * inch
+    pdf.drawString(inch, y, f"Nombre: {reservation.customer.first_name} {reservation.customer.last_name}")
+    y -= 0.2 * inch
+    pdf.drawString(inch, y, f"Email: {reservation.customer.email}")
+    y -= 0.2 * inch
+    pdf.drawString(inch, y, f"Teléfono: {reservation.customer.phone}")
+
+    y -= 0.45 * inch
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(inch, y, "Datos del vehículo")
+    pdf.setFont("Helvetica", 11)
+    y -= 0.25 * inch
+    pdf.drawString(inch, y, f"Vehículo: {reservation.car.make} {reservation.car.model} {reservation.car.year}")
+    y -= 0.2 * inch
+    pdf.drawString(inch, y, f"Placa: {reservation.car.license_plate}")
+    y -= 0.2 * inch
+    pdf.drawString(inch, y, f"Color: {reservation.car.color}")
+
+    y -= 0.45 * inch
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(inch, y, "Fechas de la reserva")
+    pdf.setFont("Helvetica", 11)
+    y -= 0.25 * inch
+    pdf.drawString(inch, y, f"Inicio: {reservation.start_date:%d/%m/%Y}")
+    y -= 0.2 * inch
+    pdf.drawString(inch, y, f"Fin: {reservation.end_date:%d/%m/%Y}")
+
+    y -= 0.45 * inch
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(inch, y, "Desglose de costos")
+    pdf.setFont("Helvetica", 11)
+    y -= 0.25 * inch
+    pdf.drawString(inch, y, f"Total reserva: ${reservation.total_cost}")
+    y -= 0.2 * inch
+    pdf.setFont("Helvetica-Bold", 11)
+    pdf.drawString(inch, y, f"Total a pagar: ${reservation.total_cost}")
+
+    y -= 0.6 * inch
+    pdf.setFont("Helvetica", 11)
+    pdf.drawString(inch, y, "Firma del cliente:")
+    y -= 0.2 * inch
+    pdf.line(inch, y, inch + 3.5 * inch, y)
+
+    pdf.showPage()
+    pdf.save()
     return buffer.getvalue()
 
 
 def _send_reservation_confirmation(reservation: Reservation) -> None:
     try:
-        template = get_template("crm/reservation_contract.html")
-        html = template.render(
-            {
-                "reservation": reservation,
-                "customer": reservation.customer,
-                "car": reservation.car,
-            }
-        )
-        pdf_bytes = _render_contract_pdf(html)
-        if pdf_bytes is None:
-            return
+        pdf_bytes = _render_contract_pdf(reservation)
         subject = "Reserva Confirmada"
         body = "Gracias por reservar con Gamboa Rental Cars. Adjuntamos el contrato en PDF."
         message = EmailMessage(
@@ -425,10 +471,11 @@ def _create_public_reservation(
 ) -> Reservation:
     if end_date < start_date:
         raise ValueError("Rango de fechas inválido.")
-
-    car = get_object_or_404(Car, id=car_id)
+    if start_date < timezone.localdate():
+        raise ValueError("La fecha de inicio no puede estar en el pasado.")
 
     with transaction.atomic():
+        car = get_object_or_404(Car.objects.select_for_update(), id=car_id)
         conflict = Reservation.objects.select_for_update().filter(
             car=car,
             start_date__lte=end_date,
@@ -469,12 +516,13 @@ def home_view(request):
     return render(request, "home.html", {"cars": cars})
 
 
+@ratelimit(key="ip", rate="60/m", method="GET", block=True)
 def search_view(request):
     """
     Página de búsqueda y filtros. Soporta filtrar por ID de vehículo
     (para cuando el usuario viene del Home), además de fechas, marca y precio.
     """
-    pickup = (request.GET.get("pickup") or "Panamá").strip()
+    pickup = (request.GET.get("pickup") or "").strip()
     
     start_raw = request.GET.get("start_date") or ""
     end_raw = request.GET.get("end_date") or ""
@@ -548,6 +596,7 @@ def search_view(request):
     return render(request, "search.html", context)
 
 
+@method_decorator(ratelimit(key="ip", rate="10/m", method="POST", block=True), name="dispatch")
 class PublicReservationView(FormView):
     form_class = PublicReservationForm
     template_name = "crm/public_checkout.html"
@@ -572,7 +621,7 @@ class PublicReservationView(FormView):
         ctx = super().get_context_data(**kwargs)
 
         car_id = self.request.GET.get("car_id") or self.request.POST.get("car_id")
-        pickup = self.request.GET.get("pickup") or self.request.POST.get("pickup") or "Panamá"
+        pickup = self.request.GET.get("pickup") or self.request.POST.get("pickup") or ""
 
         start_raw = self.request.GET.get("start_date") or self.request.POST.get("start_date")
         end_raw = self.request.GET.get("end_date") or self.request.POST.get("end_date")
@@ -663,6 +712,7 @@ def public_reservation_success_view(request):
     return render(request, "crm/public_reservation_success.html", {"reservation": reservation})
 
 
+@ratelimit(key="ip", rate="10/m", method="POST", block=True)
 @require_POST
 def public_reservation_api(request):
     try:

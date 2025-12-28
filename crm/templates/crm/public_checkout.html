@@ -69,6 +69,15 @@
           {% if form.errors %}
             <div class="alert alert-danger mt-3">
               {{ form.non_field_errors }}
+              {% if form.car.errors %}
+                <div class="small mt-2">{{ form.car.errors.0 }}</div>
+              {% endif %}
+              {% if form.start_date.errors %}
+                <div class="small mt-2">{{ form.start_date.errors.0 }}</div>
+              {% endif %}
+              {% if form.end_date.errors %}
+                <div class="small mt-2">{{ form.end_date.errors.0 }}</div>
+              {% endif %}
             </div>
           {% endif %}
 
@@ -83,7 +92,7 @@
         <h5 class="fw-bold mb-3">Tu reserva</h5>
 
         {% if car %}
-          <img src="{% static 'images/car_placeholder.png' %}" alt="carro"/>
+          <img src="{% static 'custom/images/car_placeholder.png' %}" alt="carro"/>
           <h6 class="fw-bold mt-3">{{ car.make }} {{ car.model }} {{ car.year }}</h6>
           <div class="text-muted">{{ car.color }}</div>
         {% else %}

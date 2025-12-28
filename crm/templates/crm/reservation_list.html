@@ -1,12 +1,19 @@
 {% extends 'crm/base.html' %}
 {% block page_title %}Reservas{% endblock %}
 {% block page_subtitle %}Sigue el estado de las reservas en curso.{% endblock %}
+{% block breadcrumbs %}
+  <li class="breadcrumb-item active" aria-current="page">Reservas</li>
+{% endblock %}
 
 {% block content %}
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div class="d-flex gap-2">
-      <a href="{% url 'crm:reservation_add' %}" class="btn btn-primary">Crear reserva</a>
-      <a href="{% url 'crm:reservation_export_csv' %}" class="btn btn-success btn-sm align-self-center">Exportar CSV</a>
+      <a href="{% url 'crm:reservation_add' %}" class="btn btn-primary">
+        <i class="bi bi-calendar-plus me-1"></i> Crear reserva
+      </a>
+      <a href="{% url 'crm:reservation_export_csv' %}" class="btn btn-success btn-sm align-self-center">
+        <i class="bi bi-download me-1"></i> Exportar CSV
+      </a>
     </div>
     <form class="d-flex" method="get">
       <input
@@ -19,9 +26,9 @@
       <button class="btn btn-outline-secondary btn-sm" type="submit">Buscar</button>
     </form>
   </div>
-  <div class="card shadow-sm border-0">
+  <div class="card crm-card">
     <div class="table-responsive">
-      <table class="table align-middle mb-0">
+      <table class="table align-middle mb-0 crm-table">
     <thead>
       <tr>
         <th>Cliente</th>
@@ -41,9 +48,7 @@
           <td>{{ reservation.start_date }}</td>
           <td>{{ reservation.end_date }}</td>
           <td>
-            {% if reservation.status == 'pending' %}
-              <span class="badge bg-warning text-dark">Pendiente</span>
-            {% elif reservation.status == 'booked' %}
+            {% if reservation.status == 'booked' %}
               <span class="badge bg-info text-dark">Reservado</span>
             {% elif reservation.status == 'in_progress' %}
               <span class="badge bg-primary">En curso</span>

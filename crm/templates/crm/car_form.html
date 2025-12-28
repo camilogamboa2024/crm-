@@ -4,9 +4,15 @@
   {% if object %}Editar vehículo{% else %}Agregar vehículo{% endif %}
 {% endblock %}
 {% block page_subtitle %}Gestiona la información de tu flota.{% endblock %}
+{% block breadcrumbs %}
+  <li class="breadcrumb-item"><a href="{% url 'crm:car_list' %}">Vehículos</a></li>
+  <li class="breadcrumb-item active" aria-current="page">
+    {% if object %}Editar{% else %}Nuevo{% endif %}
+  </li>
+{% endblock %}
 
 {% block content %}
-  <div class="card shadow-sm border-0">
+  <div class="card crm-card">
     <div class="card-body">
       <form method="post" novalidate>
         {% csrf_token %}

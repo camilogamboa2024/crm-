@@ -2,88 +2,145 @@
 
 {% block page_title %}Dashboard Ejecutivo{% endblock %}
 {% block page_subtitle %}Resumen financiero y operativo del mes actual.{% endblock %}
+{% block breadcrumbs %}
+  <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
+{% endblock %}
 
 {% block content %}
-<div class="crm-grid">
-  <div class="crm-stat-card">
-    <div>
-      <div class="crm-stat-label">Ingresos del mes</div>
-      <div class="crm-stat-value">${{ revenue_month }}</div>
-      <div class="crm-stat-meta">Total de reservas activas</div>
-    </div>
-    <div class="crm-stat-icon">
-      <i class="bi bi-cash-stack"></i>
-    </div>
-  </div>
-
-  <div class="crm-stat-card">
-    <div>
-      <div class="crm-stat-label">Reservas del mes</div>
-      <div class="crm-stat-value">{{ reservations_month }}</div>
-      <div class="crm-stat-meta">Operaciones confirmadas</div>
-    </div>
-    <div class="crm-stat-icon">
-      <i class="bi bi-graph-up-arrow"></i>
+<div class="row g-3">
+  <div class="col-md-6 col-xl-3">
+    <div class="crm-stat">
+      <div>
+        <div class="stat-label">Ingresos del mes</div>
+        <div class="stat-value">${{ revenue_month }}</div>
+        <div class="text-muted small">Reservas completadas</div>
+      </div>
+      <div class="stat-icon">
+        <i class="bi bi-cash-stack"></i>
+      </div>
     </div>
   </div>
 
-  <div class="crm-stat-card">
-    <div>
-      <div class="crm-stat-label">Disponibles hoy</div>
-      <div class="crm-stat-value">{{ available_today }}</div>
-      <div class="crm-stat-meta">Flota libre</div>
-    </div>
-    <div class="crm-stat-icon">
-      <i class="bi bi-car-front-fill"></i>
+  <div class="col-md-6 col-xl-3">
+    <div class="crm-stat">
+      <div>
+        <div class="stat-label">Reservas activas</div>
+        <div class="stat-value">{{ reservations_active }}</div>
+        <div class="text-muted small">En curso ahora</div>
+      </div>
+      <div class="stat-icon">
+        <i class="bi bi-graph-up-arrow"></i>
+      </div>
     </div>
   </div>
 
-  <div class="crm-stat-card">
-    <div>
-      <div class="crm-stat-label">Canceladas (mes)</div>
-      <div class="crm-stat-value">{{ cancelled_month }}</div>
-      <div class="crm-stat-meta">Seguimiento de pérdidas</div>
+  <div class="col-md-6 col-xl-3">
+    <div class="crm-stat">
+      <div>
+        <div class="stat-label">Disponibles hoy</div>
+        <div class="stat-value">{{ available_today }}</div>
+        <div class="text-muted small">Flota en inventario</div>
+      </div>
+      <div class="stat-icon">
+        <i class="bi bi-car-front-fill"></i>
+      </div>
     </div>
-    <div class="crm-stat-icon">
-      <i class="bi bi-exclamation-triangle"></i>
+  </div>
+
+  <div class="col-md-6 col-xl-3">
+    <div class="crm-stat">
+      <div>
+        <div class="stat-label">Entregas hoy</div>
+        <div class="stat-value">{{ deliveries_today }}</div>
+        <div class="text-muted small">Reservas para hoy</div>
+      </div>
+      <div class="stat-icon">
+        <i class="bi bi-truck"></i>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="crm-card mt-4">
-  <div class="crm-card-header">
-    <h2>Últimas 5 reservas</h2>
-    <span class="crm-card-subtitle">Actualizado al {{ today|date:"d/m/Y" }}</span>
+<div class="row g-3 mt-1">
+  <div class="col-lg-5">
+    <div class="card crm-card h-100">
+      <div class="card-header">
+        <div class="fw-semibold">Reservas recientes</div>
+        <span class="text-muted small">Últimos 7 días</span>
+      </div>
+      <div class="card-body">
+        <canvas id="crm-reservation-chart" height="180"></canvas>
+      </div>
+    </div>
   </div>
-  <div class="table-responsive">
-    <table class="table align-middle mb-0">
-      <thead>
-        <tr>
-          <th>Cliente</th>
-          <th>Vehículo</th>
-          <th>Fechas</th>
-          <th>Estado</th>
-          <th class="text-end">Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for reservation in latest_reservations %}
-          <tr>
-            <td>{{ reservation.customer }}</td>
-            <td>{{ reservation.car }}</td>
-            <td>{{ reservation.start_date|date:"d/m/Y" }} → {{ reservation.end_date|date:"d/m/Y" }}</td>
-            <td>
-              <span class="badge bg-secondary">{{ reservation.get_status_display }}</span>
-            </td>
-            <td class="text-end">${{ reservation.total_cost }}</td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="5" class="text-center text-muted py-4">No hay reservas recientes.</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="col-lg-7">
+    <div class="card crm-card h-100">
+      <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+        <div class="fw-semibold">Últimas 5 reservas</div>
+        <span class="text-muted small">Actualizado al {{ today|date:"d/m/Y" }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0 crm-table">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Vehículo</th>
+              <th>Fechas</th>
+              <th>Estado</th>
+              <th class="text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for reservation in latest_reservations %}
+              <tr>
+                <td>{{ reservation.customer }}</td>
+                <td>{{ reservation.car }}</td>
+                <td>{{ reservation.start_date|date:"d/m/Y" }} → {{ reservation.end_date|date:"d/m/Y" }}</td>
+                <td>
+                  <span class="badge bg-secondary">{{ reservation.get_status_display }}</span>
+                </td>
+                <td class="text-end">${{ reservation.total_cost }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">No hay reservas recientes.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script>
+    const chartLabels = {{ chart_labels|safe }};
+    const chartValues = {{ chart_values|safe }};
+    const ctx = document.getElementById('crm-reservation-chart');
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: chartLabels,
+          datasets: [{
+            label: 'Reservas',
+            data: chartValues,
+            borderColor: '#b66dff',
+            backgroundColor: 'rgba(182, 109, 255, 0.2)',
+            fill: true,
+            tension: 0.35,
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { ticks: { precision: 0 } }
+          }
+        }
+      });
+    }
+  </script>
 {% endblock %}

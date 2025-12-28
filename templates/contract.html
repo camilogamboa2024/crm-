@@ -5,12 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contrato de Arrendamiento | Gamboa Rental Cars</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/site.css' %}">
   </head>
   <body>
     <header class="navbar">
       <div class="container">
-        <a href="/" class="logo"><img src="{% static 'images/logo.png' %}" alt="Logo"></a>
+        <a href="/" class="logo"><img src="{% static 'custom/images/logo.png' %}" alt="Logo"></a>
         <nav class="nav-menu" id="navMenu">
           <a href="/">Inicio</a>
           <a href="/crm/public/reserve/">Reservar</a>
@@ -38,7 +38,7 @@
         <p>&copy; 2025 Gamboa Rental Cars. Todos los derechos reservados.</p>
       </div>
     </footer>
-    <a href="https://wa.me/50762969414?text=Hola%20necesito%20información%20sobre%20el%20contrato" class="whatsapp-btn" target="_blank" rel="noopener noreferrer">WhatsApp</a>
-    <script src="{% static 'js/script.js' %}"></script>
+    <a href="https://wa.me/{{ whatsapp_number }}?text=Hola%20necesito%20información%20sobre%20el%20contrato" class="whatsapp-btn" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+    <script src="{% static 'js/site.js' %}"></script>
   </body>
 </html>

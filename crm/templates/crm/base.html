@@ -1,11 +1,10 @@
-{# Base template for CRM pages. #}
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CRM | Gamboa Rental Cars</title>
+    <title>{% block title %}CRM | Gamboa Rental Cars{% endblock %}</title>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -16,71 +15,109 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
     />
-    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+    <link rel="stylesheet" href="{% static 'vendor/purpleadmin/css/purpleadmin-base.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/crm.css' %}" />
+    {% block extra_css %}{% endblock %}
   </head>
-  <body class="crm-body">
-    <div class="crm-shell">
-      <aside class="crm-sidebar">
-        <div class="crm-brand">
-          <a href="/" class="crm-logo">
-            <img src="{% static 'images/logo.png' %}" alt="Logo" />
-            <span>Gamboa CRM</span>
-          </a>
-        </div>
-        <nav class="crm-nav">
+  <body class="crm-app">
+    <div class="container-scroller">
+      <nav class="sidebar sidebar-offcanvas">
+        <a class="brand-logo" href="/">
+          <img src="{% static 'custom/images/logo.png' %}" alt="Logo" />
+          <span>Gamboa CRM</span>
+        </a>
+        <div class="px-3 text-uppercase small text-muted">Panel</div>
+        <ul class="nav flex-column mt-3">
           {% if is_manager %}
-            <a class="crm-link" href="{% url 'crm:dashboard' %}">
-              <i class="bi bi-speedometer2"></i>
-              <span>Dashboard</span>
-            </a>
-            <a class="crm-link" href="{% url 'crm:calendar' %}">
-              <i class="bi bi-calendar-week"></i>
-              <span>Calendario</span>
-            </a>
+            <li class="nav-item">
+              <a
+                class="nav-link {% if request.path == '/crm/dashboard/' %}active{% endif %}"
+                href="{% url 'crm:dashboard' %}"
+              >
+                <i class="bi bi-speedometer2"></i>
+                Dashboard
+              </a>
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link {% if request.path == '/crm/calendar/' %}active{% endif %}"
+                href="{% url 'crm:calendar' %}"
+              >
+                <i class="bi bi-calendar-week"></i>
+                Calendario
+              </a>
+            </li>
           {% endif %}
-          
-          <a class="crm-link" href="{% url 'crm:reservation_list' %}">
-            <i class="bi bi-calendar-check"></i>
-            <span>Reservas</span>
-          </a>
-          <a class="crm-link" href="{% url 'crm:car_list' %}">
-            <i class="bi bi-car-front"></i>
-            <span>Vehículos</span>
-          </a>
-          <a class="crm-link" href="{% url 'crm:customer_list' %}">
-            <i class="bi bi-people"></i>
-            <span>Clientes</span>
-          </a>
-          
+          <li class="nav-item">
+            <a
+              class="nav-link {% if '/crm/reservations/' in request.path %}active{% endif %}"
+              href="{% url 'crm:reservation_list' %}"
+            >
+              <i class="bi bi-calendar-check"></i>
+              Reservas
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link {% if '/crm/cars/' in request.path %}active{% endif %}"
+              href="{% url 'crm:car_list' %}"
+            >
+              <i class="bi bi-car-front"></i>
+              Vehículos
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link {% if '/crm/customers/' in request.path %}active{% endif %}"
+              href="{% url 'crm:customer_list' %}"
+            >
+              <i class="bi bi-people"></i>
+              Clientes
+            </a>
+          </li>
           {% if is_manager %}
-            <a class="crm-link" href="/admin/">
-              <i class="bi bi-shield-lock"></i>
-              <span>Admin</span>
-            </a>
+            <li class="nav-item">
+              <a class="nav-link" href="/admin/">
+                <i class="bi bi-shield-lock"></i>
+                Admin
+              </a>
+            </li>
           {% endif %}
-          
-          <a class="crm-link" href="/">
-            <i class="bi bi-box-arrow-left"></i>
-            <span>Sitio público</span>
-          </a>
+          <li class="nav-item">
+            <a class="nav-link" href="/">
+              <i class="bi bi-box-arrow-left"></i>
+              Sitio público
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="page-body-wrapper">
+        <nav class="navbar navbar-expand-lg">
+          <div class="container-fluid">
+            <div>
+              <h1 class="page-title mb-0">{% block page_title %}Panel CRM{% endblock %}</h1>
+              <p class="page-subtitle">{% block page_subtitle %}{% endblock %}</p>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary d-lg-none" data-crm-toggle="sidebar" type="button">
+              <i class="bi bi-list"></i>
+            </button>
+            <div class="crm-user-chip">
+              <i class="bi bi-person-circle"></i>
+              <span>{{ request.user.get_full_name|default:request.user.username }}</span>
+            </div>
+          </div>
         </nav>
-      </aside>
 
-      <div class="crm-main">
-        <header class="crm-topbar">
-          <div>
-            <h1 class="crm-title">{% block page_title %}Panel CRM{% endblock %}</h1>
-            <p class="crm-subtitle">{% block page_subtitle %}{% endblock %}</p>
-          </div>
-          <div class="crm-user">
-            <i class="bi bi-person-circle"></i>
-            <span>{{ request.user.get_full_name|default:request.user.username }}</span>
-          </div>
-        </header>
-
-        <main class="crm-content">
+        <div class="content-wrapper">
+          <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0">
+              <li class="breadcrumb-item"><a href="{% url 'crm:root' %}">CRM</a></li>
+              {% block breadcrumbs %}{% endblock %}
+            </ol>
+          </nav>
           {% if messages %}
-            <div class="crm-alerts">
+            <div class="mb-3">
               {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                   {{ message }}
@@ -90,18 +127,23 @@
             </div>
           {% endif %}
           {% block content %}{% endblock %}
-        </main>
+        </div>
 
         <footer class="crm-footer">
-          <p>&copy; 2025 Gamboa Rental Cars | Panel CRM</p>
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <span>&copy; 2025 Gamboa Rental Cars | Panel CRM</span>
+            <span class="text-muted">MVP PurpleAdmin Bootstrap</span>
+          </div>
         </footer>
       </div>
     </div>
-    
+
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
       integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
       crossorigin="anonymous"
     ></script>
+    <script src="{% static 'js/crm.js' %}"></script>
+    {% block extra_js %}{% endblock %}
   </body>
 </html>

@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import date
 
 from django import forms
+from django.utils import timezone
 
 from .models import Car, Customer, Reservation
 
@@ -66,7 +67,7 @@ class PublicReservationForm(forms.Form):
     """Form used on the public website to allow customers to request a booking."""
 
     car = forms.ModelChoiceField(
-        queryset=Car.objects.filter(status='available'),
+        queryset=Car.objects.none(),
         label='Vehículo',
         help_text='Seleccione el vehículo que desea reservar',
     )
@@ -113,3 +114,15 @@ class PublicReservationForm(forms.Form):
         for name, field in self.fields.items():
             if isinstance(field.widget, (forms.Select, forms.DateInput, forms.TextInput, forms.EmailInput)):
                 field.widget.attrs.setdefault('class', 'form-control')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get("start_date")
+        end_date = cleaned_data.get("end_date")
+        if not start_date or not end_date:
+            raise forms.ValidationError("Debes seleccionar fechas de inicio y fin.")
+        if end_date < start_date:
+            raise forms.ValidationError("La fecha de fin no puede ser anterior a la de inicio.")
+        if start_date < timezone.localdate():
+            raise forms.ValidationError("La fecha de inicio no puede estar en el pasado.")
+        return cleaned_data

@@ -21,13 +21,15 @@
 <div class="wrap">
 
   <div class="d-flex align-items-center gap-3 mb-4">
-    <img src="{% static 'images/logo.png' %}" alt="logo" style="height:42px;">
+    <img src="{% static 'custom/images/logo.png' %}" alt="logo" style="height:42px;">
     <div>
       <div class="fw-bold">Buscar vehículos</div>
       <div class="muted small">
-        Pickup: <b>{{ pickup }}</b>
+        {% if pickup %}
+          Pickup: <b>{{ pickup }}</b>
+        {% endif %}
         {% if start_date and end_date %}
-          | Fechas: <b>{{ start_date }}</b> → <b>{{ end_date }}</b>
+          {% if pickup %}|{% endif %} Fechas: <b>{{ start_date }}</b> → <b>{{ end_date }}</b>
           {% if days %} ({{ days }} día(s)) {% endif %}
         {% endif %}
       </div>
@@ -96,7 +98,7 @@
           {% for car in cars %}
             <div class="card p-3">
               <div class="d-flex gap-3 align-items-center">
-                <img class="car-img" src="{% static 'images/car_placeholder.png' %}" alt="car"/>
+                <img class="car-img" src="{% static 'custom/images/car_placeholder.png' %}" alt="car"/>
 
                 <div class="flex-grow-1">
                   <div class="d-flex justify-content-between align-items-start">
@@ -134,7 +136,7 @@
                       Reservar ahora
                     </a>
 
-                    <a class="btn btn-outline-secondary" href="https://wa.me/50762969414?text=Hola%20quiero%20reservar%20un%20veh%C3%ADculo" target="_blank" rel="noopener">
+                    <a class="btn btn-outline-secondary" href="https://wa.me/{{ whatsapp_number }}?text=Hola%20quiero%20reservar%20un%20veh%C3%ADculo" target="_blank" rel="noopener">
                       WhatsApp
                     </a>
                   </div>
