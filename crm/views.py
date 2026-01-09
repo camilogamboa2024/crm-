@@ -1,3 +1,4 @@
+
 """
 crm.views
 
@@ -6,22 +7,22 @@ Vistas del CRM y de la web pública.
 
 from __future__ import annotations
 
+import csv
 import json
 from calendar import monthrange
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from io import BytesIO
-import csv
 
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.messages.views import SuccessMessageMixin
-from django.conf import settings
 from django.core.exceptions import PermissionDenied
+from django.core.mail import EmailMessage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import Count, DecimalField, Q, Sum
 from django.db.models.functions import Coalesce
-from django.core.mail import EmailMessage
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -29,10 +30,13 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, FormView, ListView, TemplateView, UpdateView, View
+
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
-from ratelimit.decorators import ratelimit
+
+# ✅ django-ratelimit expone django_ratelimit.decorators (no "ratelimit.decorators")
+from django_ratelimit.decorators import ratelimit
 
 from .forms import CarForm, CustomerForm, PublicReservationForm, ReservationForm
 from .models import Car, Customer, Reservation
@@ -90,7 +94,6 @@ class DashboardView(StaffRequiredMixin, TemplateView):
         )["total"]
 
         reservations_active = Reservation.objects.filter(status="in_progress").count()
-
         fleet_available = Car.objects.filter(status="available").count()
 
         deliveries_today = Reservation.objects.filter(
@@ -523,7 +526,7 @@ def search_view(request):
     (para cuando el usuario viene del Home), además de fechas, marca y precio.
     """
     pickup = (request.GET.get("pickup") or "").strip()
-    
+
     start_raw = request.GET.get("start_date") or ""
     end_raw = request.GET.get("end_date") or ""
 
@@ -533,7 +536,7 @@ def search_view(request):
     selected_makes = request.GET.getlist("make")
     min_price = request.GET.get("min_price", "")
     max_price = request.GET.get("max_price", "")
-    
+
     # Nuevo: Filtro por ID (enlace directo desde el home)
     car_id = request.GET.get("car_id")
 
