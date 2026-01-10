@@ -157,3 +157,5 @@ Se usa `reportlab` para generar PDFs sin dependencias nativas complejas en produ
 Christian Camilo Marmolejo Gamboa — Founder / Dev
 
 Stiben García Cartagena — Developer
+
+CI check trigger
