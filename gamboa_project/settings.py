@@ -1,3 +1,4 @@
+
 """
 Django settings for gamboa_project.
 
@@ -12,6 +13,7 @@ etc.).
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -34,6 +36,7 @@ def _env_list(name: str, default: list[str] | None = None) -> list[str]:
     if value is None:
         return default or []
     return [item.strip() for item in value.split(",") if item.strip()]
+
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-clave-fija-desarrollo-gamboa-rental")
@@ -121,7 +124,14 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# ✅ Producción: Manifest (cache-busting) + compression
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# ✅ Tests: evita que fallen por "Missing staticfiles manifest entry..."
+# (No necesita collectstatic para correr tests)
+if "test" in sys.argv:
+    STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
