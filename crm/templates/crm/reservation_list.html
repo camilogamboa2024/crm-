@@ -7,23 +7,43 @@
 
 {% block content %}
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div class="d-flex gap-2">
-      <a href="{% url 'crm:reservation_add' %}" class="btn btn-primary">
-        <i class="bi bi-calendar-plus me-1"></i> Crear reserva
-      </a>
-      <a href="{% url 'crm:reservation_export_csv' %}" class="btn btn-success btn-sm align-self-center">
-        <i class="bi bi-download me-1"></i> Exportar CSV
-      </a>
+    <div class="d-flex flex-wrap gap-2">
+      {% if is_staff_role %}
+        <a href="{% url 'crm:reservation_add' %}" class="btn btn-primary">
+          <i class="bi bi-calendar-plus me-1"></i> Crear reserva
+        </a>
+        <a href="{% url 'crm:reservation_export_csv' %}" class="btn btn-success btn-sm align-self-center">
+          <i class="bi bi-download me-1"></i> Exportar CSV
+        </a>
+      {% endif %}
     </div>
-    <form class="d-flex" method="get">
+    <form class="d-flex flex-wrap gap-2" method="get">
       <input
-        class="form-control form-control-sm me-2"
+        class="form-control form-control-sm"
         type="search"
         name="q"
         placeholder="Buscar por cliente o vehículo"
         value="{{ query }}"
       />
-      <button class="btn btn-outline-secondary btn-sm" type="submit">Buscar</button>
+      <select class="form-select form-select-sm" name="status">
+        <option value="">Todos los estados</option>
+        {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <input
+        class="form-control form-control-sm"
+        type="date"
+        name="start_date"
+        value="{{ start_date }}"
+      />
+      <input
+        class="form-control form-control-sm"
+        type="date"
+        name="end_date"
+        value="{{ end_date }}"
+      />
+      <button class="btn btn-outline-secondary btn-sm" type="submit">Filtrar</button>
     </form>
   </div>
   <div class="card crm-card">
@@ -60,12 +80,18 @@
           </td>
           <td>${{ reservation.total_cost }}</td>
           <td>
-            <div class="btn-group btn-group-sm" role="group">
-              <a href="{% url 'crm:reservation_edit' reservation.pk %}" class="btn btn-outline-secondary">Editar</a>
-              <a href="{% url 'crm:reservation_contract' reservation.pk %}" class="btn btn-outline-primary">
+            {% if is_staff_role %}
+              <div class="btn-group btn-group-sm" role="group">
+                <a href="{% url 'crm:reservation_edit' reservation.pk %}" class="btn btn-outline-secondary">Editar</a>
+                <a href="{% url 'crm:reservation_contract' reservation.pk %}" class="btn btn-outline-primary">
+                  <i class="bi bi-file-earmark-pdf"></i>
+                </a>
+              </div>
+            {% else %}
+              <a href="{% url 'crm:reservation_contract' reservation.pk %}" class="btn btn-outline-primary btn-sm">
                 <i class="bi bi-file-earmark-pdf"></i>
               </a>
-            </div>
+            {% endif %}
           </td>
         </tr>
       {% empty %}
@@ -80,4 +106,5 @@
       </table>
     </div>
   </div>
+  {% include "crm/partials/pagination.html" %}
 {% endblock %}

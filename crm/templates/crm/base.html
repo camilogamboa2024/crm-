@@ -28,7 +28,7 @@
         </a>
         <div class="px-3 text-uppercase small text-muted">Panel</div>
         <ul class="nav flex-column mt-3">
-          {% if is_manager %}
+          {% if is_admin %}
             <li class="nav-item">
               <a
                 class="nav-link {% if request.path == '/crm/dashboard/' %}active{% endif %}"
@@ -75,7 +75,7 @@
               Clientes
             </a>
           </li>
-          {% if is_manager %}
+          {% if is_admin %}
             <li class="nav-item">
               <a class="nav-link" href="/admin/">
                 <i class="bi bi-shield-lock"></i>
@@ -102,9 +102,15 @@
             <button class="btn btn-sm btn-outline-secondary d-lg-none" data-crm-toggle="sidebar" type="button">
               <i class="bi bi-list"></i>
             </button>
-            <div class="crm-user-chip">
-              <i class="bi bi-person-circle"></i>
-              <span>{{ request.user.get_full_name|default:request.user.username }}</span>
+            <div class="d-flex align-items-center gap-3">
+              <div class="crm-user-chip">
+                <i class="bi bi-person-circle"></i>
+                <span>{{ request.user.get_full_name|default:request.user.username }}</span>
+              </div>
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'logout' %}">
+                <i class="bi bi-box-arrow-right"></i>
+                Salir
+              </a>
             </div>
           </div>
         </nav>

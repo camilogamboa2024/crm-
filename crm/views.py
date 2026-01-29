@@ -17,7 +17,7 @@ from io import BytesIO
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.messages.views import SuccessMessageMixin
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.mail import EmailMessage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
@@ -46,33 +46,55 @@ from .models import Car, Customer, Reservation
 # CRM (panel de administración)
 # -----------------------------------------------------------------------------
 
-def _is_manager(user) -> bool:
+ROLE_ADMIN = "admin"
+ROLE_STAFF = "staff"
+ROLE_VIEWER = "viewer"
+
+
+def _user_in_group(user, group_name: str) -> bool:
+    return bool(user and user.groups.filter(name=group_name).exists())
+
+
+def _user_role(user) -> str | None:
     if not user or not user.is_authenticated:
-        return False
-    if user.is_superuser:
-        return True
-    return user.groups.filter(name="Gerencia").exists()
+        return None
+    if user.is_superuser or _user_in_group(user, ROLE_ADMIN):
+        return ROLE_ADMIN
+    if _user_in_group(user, ROLE_STAFF) or user.is_staff:
+        return ROLE_STAFF
+    if _user_in_group(user, ROLE_VIEWER):
+        return ROLE_VIEWER
+    return None
 
 
-class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+class RoleRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     raise_exception = True
+    required_roles: tuple[str, ...] = ()
 
     def test_func(self) -> bool:
-        return bool(self.request.user and self.request.user.is_staff)
+        role = _user_role(self.request.user)
+        if role is None:
+            return False
+        if not self.required_roles:
+            return True
+        return role in self.required_roles
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["is_manager"] = _is_manager(self.request.user)
+        role = _user_role(self.request.user)
+        querystring = self.request.GET.copy()
+        querystring.pop("page", None)
+        context["user_role"] = role
+        context["is_admin"] = role == ROLE_ADMIN
+        context["is_staff_role"] = role in {ROLE_ADMIN, ROLE_STAFF}
+        context["is_viewer"] = role == ROLE_VIEWER
+        context["querystring"] = querystring.urlencode()
         return context
 
 
-class DashboardView(StaffRequiredMixin, TemplateView):
+class DashboardView(RoleRequiredMixin, TemplateView):
     template_name = "crm/dashboard.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        if not _is_manager(request.user):
-            return redirect("crm:reservation_list")
-        return super().dispatch(request, *args, **kwargs)
+    required_roles = (ROLE_ADMIN,)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -94,7 +116,7 @@ class DashboardView(StaffRequiredMixin, TemplateView):
         )["total"]
 
         reservations_active = Reservation.objects.filter(status="in_progress").count()
-        fleet_available = Car.objects.filter(status="available").count()
+        fleet_available = Car.objects.exclude(status="maintenance").count()
 
         deliveries_today = Reservation.objects.filter(
             status="booked",
@@ -136,14 +158,17 @@ class DashboardView(StaffRequiredMixin, TemplateView):
         return context
 
 
-class CarListView(StaffRequiredMixin, ListView):
+class CarListView(RoleRequiredMixin, ListView):
     model = Car
     template_name = "crm/car_list.html"
     context_object_name = "cars"
+    paginate_by = 10
+    required_roles = (ROLE_ADMIN, ROLE_STAFF, ROLE_VIEWER)
 
     def get_queryset(self):
         queryset = super().get_queryset()
         query = (self.request.GET.get("q") or "").strip()
+        status = (self.request.GET.get("status") or "").strip()
         if query:
             queryset = queryset.filter(
                 Q(make__icontains=query)
@@ -151,34 +176,42 @@ class CarListView(StaffRequiredMixin, ListView):
                 | Q(license_plate__icontains=query)
                 | Q(color__icontains=query)
             )
+        if status:
+            queryset = queryset.filter(status=status)
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["query"] = (self.request.GET.get("q") or "").strip()
+        context["status"] = (self.request.GET.get("status") or "").strip()
+        context["status_choices"] = Car.STATUS_CHOICES
         return context
 
 
-class CarCreateView(StaffRequiredMixin, SuccessMessageMixin, CreateView):
+class CarCreateView(RoleRequiredMixin, SuccessMessageMixin, CreateView):
     model = Car
     form_class = CarForm
     template_name = "crm/car_form.html"
     success_url = reverse_lazy("crm:car_list")
     success_message = "Vehículo agregado correctamente."
+    required_roles = (ROLE_ADMIN, ROLE_STAFF)
 
 
-class CarUpdateView(StaffRequiredMixin, SuccessMessageMixin, UpdateView):
+class CarUpdateView(RoleRequiredMixin, SuccessMessageMixin, UpdateView):
     model = Car
     form_class = CarForm
     template_name = "crm/car_form.html"
     success_url = reverse_lazy("crm:car_list")
     success_message = "Vehículo actualizado correctamente."
+    required_roles = (ROLE_ADMIN, ROLE_STAFF)
 
 
-class CustomerListView(StaffRequiredMixin, ListView):
+class CustomerListView(RoleRequiredMixin, ListView):
     model = Customer
     template_name = "crm/customer_list.html"
     context_object_name = "customers"
+    paginate_by = 10
+    required_roles = (ROLE_ADMIN, ROLE_STAFF, ROLE_VIEWER)
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -198,30 +231,37 @@ class CustomerListView(StaffRequiredMixin, ListView):
         return context
 
 
-class CustomerCreateView(StaffRequiredMixin, SuccessMessageMixin, CreateView):
+class CustomerCreateView(RoleRequiredMixin, SuccessMessageMixin, CreateView):
     model = Customer
     form_class = CustomerForm
     template_name = "crm/customer_form.html"
     success_url = reverse_lazy("crm:customer_list")
     success_message = "Cliente agregado correctamente."
+    required_roles = (ROLE_ADMIN, ROLE_STAFF)
 
 
-class CustomerUpdateView(StaffRequiredMixin, SuccessMessageMixin, UpdateView):
+class CustomerUpdateView(RoleRequiredMixin, SuccessMessageMixin, UpdateView):
     model = Customer
     form_class = CustomerForm
     template_name = "crm/customer_form.html"
     success_url = reverse_lazy("crm:customer_list")
     success_message = "Cliente actualizado correctamente."
+    required_roles = (ROLE_ADMIN, ROLE_STAFF)
 
 
-class ReservationListView(StaffRequiredMixin, ListView):
+class ReservationListView(RoleRequiredMixin, ListView):
     model = Reservation
     template_name = "crm/reservation_list.html"
     context_object_name = "reservations"
+    paginate_by = 10
+    required_roles = (ROLE_ADMIN, ROLE_STAFF, ROLE_VIEWER)
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related("car", "customer")
         query = (self.request.GET.get("q") or "").strip()
+        status = (self.request.GET.get("status") or "").strip()
+        start_date = _parse_iso_date(self.request.GET.get("start_date"))
+        end_date = _parse_iso_date(self.request.GET.get("end_date"))
         if query:
             queryset = queryset.filter(
                 Q(customer__first_name__icontains=query)
@@ -231,20 +271,31 @@ class ReservationListView(StaffRequiredMixin, ListView):
                 | Q(car__model__icontains=query)
                 | Q(car__license_plate__icontains=query)
             )
+        if status:
+            queryset = queryset.filter(status=status)
+        if start_date:
+            queryset = queryset.filter(start_date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(end_date__lte=end_date)
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["query"] = (self.request.GET.get("q") or "").strip()
+        context["status"] = (self.request.GET.get("status") or "").strip()
+        context["start_date"] = self.request.GET.get("start_date") or ""
+        context["end_date"] = self.request.GET.get("end_date") or ""
+        context["status_choices"] = Reservation.STATUS_CHOICES
         return context
 
 
-class ReservationCreateView(StaffRequiredMixin, SuccessMessageMixin, CreateView):
+class ReservationCreateView(RoleRequiredMixin, SuccessMessageMixin, CreateView):
     model = Reservation
     form_class = ReservationForm
     template_name = "crm/reservation_form.html"
     success_url = reverse_lazy("crm:reservation_list")
     success_message = "Reserva registrada correctamente."
+    required_roles = (ROLE_ADMIN, ROLE_STAFF)
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -252,26 +303,30 @@ class ReservationCreateView(StaffRequiredMixin, SuccessMessageMixin, CreateView)
         return response
 
 
-class ReservationUpdateView(StaffRequiredMixin, SuccessMessageMixin, UpdateView):
+class ReservationUpdateView(RoleRequiredMixin, SuccessMessageMixin, UpdateView):
     model = Reservation
     form_class = ReservationForm
     template_name = "crm/reservation_form.html"
     success_url = reverse_lazy("crm:reservation_list")
     success_message = "Reserva actualizada correctamente."
+    required_roles = (ROLE_ADMIN, ROLE_STAFF)
 
 
 def crm_root(request):
     """/crm/ -> redirige según rol."""
     if not request.user.is_authenticated:
         return redirect(settings.LOGIN_URL)
-    if not request.user.is_staff:
+    role = _user_role(request.user)
+    if role is None:
         raise PermissionDenied
-    if _is_manager(request.user):
+    if role == ROLE_ADMIN:
         return redirect("crm:dashboard")
     return redirect("crm:reservation_list")
 
 
-class ReservationContractView(StaffRequiredMixin, View):
+class ReservationContractView(RoleRequiredMixin, View):
+    required_roles = (ROLE_ADMIN, ROLE_STAFF)
+
     def get(self, request, pk):
         reservation = get_object_or_404(
             Reservation.objects.select_related("customer", "car"),
@@ -283,14 +338,16 @@ class ReservationContractView(StaffRequiredMixin, View):
         return response
 
 
-class CalendarView(StaffRequiredMixin, TemplateView):
+class CalendarView(RoleRequiredMixin, TemplateView):
     template_name = "crm/calendar.html"
+    required_roles = (ROLE_ADMIN, ROLE_STAFF)
 
 
 def reservation_events_api(request):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Unauthorized"}, status=401)
-    if not request.user.is_staff:
+    role = _user_role(request.user)
+    if role not in {ROLE_ADMIN, ROLE_STAFF}:
         raise PermissionDenied
     events = []
     reservations = Reservation.objects.select_related("car", "customer").exclude(status="cancelled")
@@ -317,7 +374,9 @@ def reservation_events_api(request):
     return JsonResponse(events, safe=False)
 
 
-class ExportReservationsCsvView(StaffRequiredMixin, View):
+class ExportReservationsCsvView(RoleRequiredMixin, View):
+    required_roles = (ROLE_ADMIN, ROLE_STAFF)
+
     def get(self, request):
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = 'attachment; filename="reservas.csv"'
@@ -354,14 +413,7 @@ def _parse_iso_date(value: str | None) -> date | None:
 
 def _conflicting_car_ids(start_date: date, end_date: date) -> list[int]:
     """IDs de carros con reservas que se crucen con el rango solicitado."""
-    return list(
-        Reservation.objects.filter(
-            start_date__lte=end_date,
-            end_date__gte=start_date,
-        )
-        .exclude(status="cancelled")
-        .values_list("car_id", flat=True)
-    )
+    return Reservation.conflicting_car_ids(start_date, end_date)
 
 
 def _serialize_cars(qs):
@@ -472,20 +524,17 @@ def _create_public_reservation(
     start_date: date,
     end_date: date,
 ) -> Reservation:
-    if end_date < start_date:
-        raise ValueError("Rango de fechas inválido.")
-    if start_date < timezone.localdate():
-        raise ValueError("La fecha de inicio no puede estar en el pasado.")
-
     with transaction.atomic():
         car = get_object_or_404(Car.objects.select_for_update(), id=car_id)
-        conflict = Reservation.objects.select_for_update().filter(
-            car=car,
-            start_date__lte=end_date,
-            end_date__gte=start_date,
-        ).exclude(status="cancelled").exists()
-        if conflict:
-            raise ValueError("El vehículo no está disponible en ese rango.")
+        try:
+            Reservation.validate_dates(start_date, end_date, allow_past=False)
+            Reservation.validate_availability(
+                car=car,
+                start_date=start_date,
+                end_date=end_date,
+            )
+        except ValidationError as exc:
+            raise ValueError(exc.messages[0]) from exc
 
         customer, _ = Customer.objects.get_or_create(
             email=email,
@@ -540,7 +589,7 @@ def search_view(request):
     # Nuevo: Filtro por ID (enlace directo desde el home)
     car_id = request.GET.get("car_id")
 
-    qs = Car.objects.filter(status="available")
+    qs = Car.objects.exclude(status="maintenance")
 
     days = None
     if start_date and end_date and end_date >= start_date:
