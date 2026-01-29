@@ -51,6 +51,44 @@ Sistema completo para **Gamboa Rental Cars** que incluye:
 
 ---
 
+## 🧰 Solución proxy 403 / instalación offline
+
+Si tu entorno bloquea descargas (proxy 403) o no tiene internet, usa este flujo.
+
+### Diagnóstico rápido (proxy)
+
+```bash
+env | grep -i proxy
+pip config list -v
+```
+
+Si tienes un proxy, configura `pip`:
+
+```ini
+# ~/.config/pip/pip.conf (Linux/macOS) o %APPDATA%\\pip\\pip.ini (Windows)
+[global]
+proxy = http://usuario:password@proxy-host:puerto
+```
+
+### Instalación offline con wheelhouse
+
+**En una máquina con internet:**
+
+```bash
+mkdir -p wheelhouse
+python -m pip download -r requirements.txt -d wheelhouse
+tar -czf wheelhouse.tar.gz wheelhouse requirements.txt
+```
+
+**En la máquina sin internet:**
+
+```bash
+tar -xzf wheelhouse.tar.gz
+pip install --no-index --find-links wheelhouse -r requirements.txt
+```
+
+---
+
 ## 🚀 Instalación y ejecución (Local) — INSTRUCCIONES COMPLETAS (TODO JUNTO)
 
 > Nota: si en tu repo NO existe `requirements.txt`, instala Django directo como aparece abajo.
@@ -67,17 +105,21 @@ python -m ensurepip --upgrade
 python -m pip install --upgrade pip
 
 # 3) Instalar dependencias
-pip install "Django>=4.2,<5.0"
+pip install -r requirements.txt
 
-# 4) Migraciones + cargar data inicial
+# 4) Configurar variables de entorno (solo una vez)
+cp .env.example .env
+# Edita .env con tu DJANGO_SECRET_KEY y DEBUG=1
+
+# 5) Migraciones + cargar data inicial
 python manage.py makemigrations crm
 python manage.py migrate
 python manage.py loaddata crm/fixtures/initial_cars.json
 
-# 5) Crear superusuario (CRM/Admin)
+# 6) Crear superusuario (CRM/Admin)
 python manage.py createsuperuser
 
-# 6) Ejecutar el servidor
+# 7) Ejecutar el servidor
 python manage.py runserver
 
 ```
@@ -87,9 +129,10 @@ python manage.py runserver
 Crea un archivo `.env` en la raíz con valores como:
 
 ```bash
-SECRET_KEY="reemplaza-por-una-clave-segura"
-DEBUG=true
-ALLOWED_HOSTS=localhost,127.0.0.1
+DJANGO_SECRET_KEY="reemplaza-por-una-clave-segura"
+DJANGO_DEBUG=1
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+DATABASE_URL=postgres://usuario:password@localhost:5432/gamboa
 CSRF_TRUSTED_ORIGINS=http://localhost:8000
 WHATSAPP_NUMBER=50762969414
 SECURE_SSL_REDIRECT=false
@@ -104,8 +147,8 @@ AXES_COOLOFF_TIME=1
 
 Configura estas variables de entorno antes de pasar a producción:
 
-- `DEBUG=false`
-- `ALLOWED_HOSTS=tu-dominio.com`
+- `DJANGO_DEBUG=0`
+- `DJANGO_ALLOWED_HOSTS=tu-dominio.com`
 - `CSRF_TRUSTED_ORIGINS=https://tu-dominio.com`
 - `SECURE_SSL_REDIRECT=true`
 - `SESSION_COOKIE_SECURE=true`
@@ -122,12 +165,70 @@ Incluido:
 - Rate limiting para `/buscar/` y `/crm/public/reserve/`.
 - Protección anti-bruteforce en `/admin/` con `django-axes`.
 
+## 🔐 Roles y acceso al CRM
+
+El CRM usa grupos simples:
+
+- **admin**: acceso total + dashboard + Django Admin (requiere `is_staff`).
+- **staff**: crear/editar vehículos, clientes y reservas.
+- **viewer**: solo lectura.
+
+Los grupos se crean automáticamente al ejecutar `python manage.py migrate`.
+Asigna el grupo desde el panel `/admin/` (Usuarios → Grupos).
+
+## ✅ Política de disponibilidad
+
+La **disponibilidad real** se calcula por reservas activas (no canceladas).  
+El campo `Car.status` se usa para bloquear vehículos en **mantenimiento**, pero no para saber si están reservados.
+
+## 🚀 Deploy en Render (PostgreSQL)
+
+**Build Command**
+
+```bash
+pip install -r requirements.txt
+python manage.py collectstatic --noinput
+python manage.py migrate --noinput
+```
+
+**Start Command**
+
+```bash
+gunicorn gamboa_project.wsgi:application
+```
+
+Variables mínimas:
+
+- `DJANGO_SECRET_KEY`
+- `DJANGO_DEBUG=0`
+- `DJANGO_ALLOWED_HOSTS=tu-app.onrender.com`
+- `DATABASE_URL` (Render la provee automáticamente)
+- `CSRF_TRUSTED_ORIGINS=https://tu-app.onrender.com`
+
+## 🐳 Docker (local prod-like)
+
+```bash
+docker compose up --build
+```
+
+El `docker-compose.yml` levanta PostgreSQL y Django con Gunicorn.
+
+Ejemplo de `.env` para Docker:
+
+```bash
+DJANGO_SECRET_KEY=dev-secret
+DJANGO_DEBUG=1
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+DATABASE_URL=postgres://gamboa:gamboa@db:5432/gamboa
+CSRF_TRUSTED_ORIGINS=http://localhost:8000
+```
+
 ## ✅ Checklist de despliegue (MVP production-ready)
 
-1. Exporta variables de entorno anteriores y un `SECRET_KEY` seguro.
+1. Exporta variables de entorno anteriores y un `DJANGO_SECRET_KEY` seguro.
 2. Ejecuta `python manage.py collectstatic`.
 3. Corre migraciones: `python manage.py migrate`.
-4. Crea superusuario y asigna `is_staff`/grupo `Gerencia` según corresponda.
+4. Crea superusuario y asigna el grupo `admin` o `staff` según corresponda.
 5. Verifica acceso público: `/`, `/buscar/`, `/crm/public/reserve/`.
 6. Verifica acceso CRM (solo staff): `/crm/` y `/admin/`.
 7. Ejecuta `python manage.py check --deploy` en producción.
@@ -138,7 +239,7 @@ Incluido:
 Ejecuta:
 
 ```bash
-python manage.py test
+pytest
 ```
 
 ### Prueba manual de concurrencia (recomendada)

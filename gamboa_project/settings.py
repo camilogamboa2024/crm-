@@ -15,6 +15,9 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
+
+import dj_database_url
 
 from dotenv import load_dotenv
 
@@ -39,13 +42,15 @@ def _env_list(name: str, default: list[str] | None = None) -> list[str]:
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-clave-fija-desarrollo-gamboa-rental")
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY") or os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY es obligatorio para arrancar la aplicación.")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = _env_bool("DEBUG", default=False)
+DEBUG = _env_bool("DJANGO_DEBUG", default=False)
 
 # Allow all hosts during development. Adjust this in production.
-ALLOWED_HOSTS: list[str] = _env_list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+ALLOWED_HOSTS: list[str] = _env_list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
 
 # Application definition
@@ -97,10 +102,11 @@ WSGI_APPLICATION = "gamboa_project.wsgi.application"
 
 # Database
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
+        ssl_require=_env_bool("DATABASE_SSL_REQUIRE", default=not DEBUG),
+    )
 }
 
 
@@ -136,7 +142,7 @@ if "test" in sys.argv:
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-LOGIN_URL = "/admin/login/"
+LOGIN_URL = "/accounts/login/"
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", default=not DEBUG)

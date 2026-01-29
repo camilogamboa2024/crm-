@@ -11,8 +11,7 @@ from __future__ import annotations
 from datetime import date
 
 from django import forms
-from django.utils import timezone
-
+from django.core.exceptions import ValidationError
 from .models import Car, Customer, Reservation
 
 
@@ -102,12 +101,9 @@ class PublicReservationForm(forms.Form):
             start_date = None
             end_date = None
 
-        queryset = Car.objects.filter(status='available')
+        queryset = Car.objects.exclude(status='maintenance')
         if start_date and end_date and end_date >= start_date:
-            conflicting_ids = Reservation.objects.filter(
-                start_date__lte=end_date,
-                end_date__gte=start_date,
-            ).exclude(status='cancelled').values_list('car_id', flat=True)
+            conflicting_ids = Reservation.conflicting_car_ids(start_date, end_date)
             queryset = queryset.exclude(id__in=conflicting_ids)
 
         self.fields['car'].queryset = queryset
@@ -121,8 +117,19 @@ class PublicReservationForm(forms.Form):
         end_date = cleaned_data.get("end_date")
         if not start_date or not end_date:
             raise forms.ValidationError("Debes seleccionar fechas de inicio y fin.")
-        if end_date < start_date:
-            raise forms.ValidationError("La fecha de fin no puede ser anterior a la de inicio.")
-        if start_date < timezone.localdate():
-            raise forms.ValidationError("La fecha de inicio no puede estar en el pasado.")
+        try:
+            Reservation.validate_dates(start_date, end_date, allow_past=False)
+        except ValidationError as exc:
+            raise forms.ValidationError(exc.messages) from exc
+
+        car = cleaned_data.get("car")
+        if car:
+            try:
+                Reservation.validate_availability(
+                    car=car,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+            except ValidationError as exc:
+                raise forms.ValidationError(exc.messages) from exc
         return cleaned_data

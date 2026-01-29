@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      SECRET_KEY: "ci-secret-key"
-      DEBUG: "True"
+      DJANGO_SECRET_KEY: "ci-secret-key"
+      DJANGO_DEBUG: "True"
 
     steps:
       - uses: actions/checkout@v4
@@ -31,11 +31,11 @@ jobs:
         run: |
           python manage.py migrate --noinput
 
-      - name: Collect static
+      - name: Run lint
         run: |
-          python manage.py collectstatic --noinput
+          ruff check .
+          black --check .
 
       - name: Run tests
         run: |
-          python manage.py test -v 2
-
+          pytest
